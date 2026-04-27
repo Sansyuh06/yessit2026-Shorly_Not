@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinQuantum Bank — Internet Banking</title>
+  <meta name="description" content="FinQuantum Bank — Quantum-secured internet banking portal">
+  <link rel="stylesheet" href="/static/styles.css?v=6.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- LOCKDOWN OVERLAY -->
+<div class="lockdown-overlay" id="lockdownOverlay">
+  <div class="lock-icon">🔒</div>
+  <h2>SERVICES TEMPORARILY SUSPENDED</h2>
+  <p>We have detected a security threat on our quantum communication channel. All banking services have been temporarily suspended for your safety. Our team is working to restore services.</p>
+  <div style="margin-top:12px;background:rgba(255,255,255,0.15);padding:10px 24px;border-radius:6px;font-size:13px">
+    SECURITY LEVEL: CRITICAL — Contact helpline: 1800-XXX-XXXX
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="bank-header">
+  <div class="header-top">
+    <div class="header-logo">
+      <div class="logo-shield">🛡️</div>
+      <div>
+        <div class="logo-name">FinQuantum <span>Bank</span></div>
+        <div class="logo-tagline">Quantum-Secured Banking</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-security" id="headerSecurity">
+        <div class="sec-dot" id="secDot"></div>
+        <span id="secText">Quantum Secured</span>
+      </div>
+      <div class="header-bell" id="bellIcon">
+        🔔
+        <div class="bell-badge" id="bellBadge" style="display:none">0</div>
+      </div>
+      <div class="header-user">
+        <div class="user-info">
+          <div class="user-name">Treasury Ops</div>
+          <div class="user-role">Corporate Account</div>
+        </div>
+        <div class="user-avatar">TO</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-bar">
+    <div class="nav-bar-inner">
+      <button class="nav-link active" onclick="showPage('dashboard')" id="nav-dashboard">
+        📊 Dashboard
+      </button>
+      <button class="nav-link" onclick="showPage('transfer')" id="nav-transfer">
+        💸 Fund Transfer
+      </button>
+      <button class="nav-link" onclick="showPage('transactions')" id="nav-transactions">
+        📋 Transactions
+      </button>
+      <button class="nav-link" onclick="showPage('security')" id="nav-security">
+        🔐 Security Center
+      </button>
+      <button class="nav-link" onclick="showPage('sessions')" id="nav-sessions">
+        🔑 Key Sessions
+      </button>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<div class="page-body">
+
+  <!-- ═══════════════ DASHBOARD ═══════════════ -->
+  <section class="page-section active" id="page-dashboard">
+
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+      <h2>Welcome back, Treasury Operations</h2>
+      <p>Your accounts are quantum-secured with BB84 key distribution</p>
+      <div class="last-login">Last login: Today at 09:15 AM from 192.168.1.100</div>
+    </div>
+
+    <!-- Security Alert -->
+    <div class="alert-bar success" id="alertBar">
+      <span>🛡️</span>
+      <span>All transactions are protected by <strong>quantum key distribution (BB84)</strong>. Channel status: <strong>SECURE</strong></span>
+    </div>
+
+    <!-- Account Cards -->
+    <div class="accounts-section">
+      <div class="section-header">
+        <h3>My Accounts</h3>
+        <a class="view-all">View All Accounts →</a>
+      </div>
+      <div class="accounts-grid" id="accountsGrid">
+        <!-- Populated dynamically from /accounts -->
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section-header">
+      <h3>Quick Actions</h3>
+    </div>
+    <div class="quick-actions">
+      <button class="quick-action-btn" onclick="showPage('transfer')">
+        <div class="qa-icon qa-blue">💸</div>
+        <div class="qa-label">Fund Transfer</div>
+      </button>
+      <button class="quick-action-btn">
+        <div class="qa-icon qa-green">📱</div>
+        <div class="qa-label">UPI Payment</div>
+      </button>
+      <button class="quick-action-btn">
+        <div class="qa-icon qa-orange">📄</div>
+        <div class="qa-label">Bill Payment</div>
+      </button>
+      <button class="quick-action-btn">
+        <div class="qa-icon qa-purple">🏦</div>
+        <div class="qa-label">NEFT / RTGS</div>
+      </button>
+      <button class="quick-action-btn" onclick="showPage('security')">
+        <div class="qa-icon qa-teal">🔐</div>
+        <div class="qa-label">Security Center</div>
+      </button>
+      <button class="quick-action-btn">
+        <div class="qa-icon qa-red">📊</div>
+        <div class="qa-label">Statements</div>
+      </button>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Recent Transactions</h3>
+        <button class="btn btn-outline btn-sm" onclick="showPage('transactions')">View All</button>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead>
+            <tr>
+              <th>Details</th>
+              <th>Date & Time</th>
+              <th>Reference No.</th>
+              <th>QBER</th>
+              <th>Amount (₹)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recentTxBody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px">No recent transactions. Start by making a fund transfer.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FUND TRANSFER ═══════════════ -->
+  <section class="page-section" id="page-transfer">
+
+    <div class="alert-bar info" id="transferAlert">
+      <span>🔐</span>
+      <span>Each transfer initiates a fresh <strong>BB84 quantum key exchange</strong> on Qiskit AerSimulator for end-to-end encryption</span>
+    </div>
+
+    <div class="transfer-layout">
+      <div class="card">
+        <div class="card-header">
+          <h3>💸 Fund Transfer — NEFT / IMPS</h3>
+        </div>
+        <div class="card-body-padded">
+          <form id="transferForm" onsubmit="doTransfer(event)">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-group">
+                <label>From Account <span class="required">*</span></label>
+                <select id="fromAccount">
+                  <option value="">Loading accounts...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>To Account <span class="required">*</span></label>
+                <select id="toAccount">
+                  <option value="">Loading accounts...</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-group">
+                <label>Amount (₹) <span class="required">*</span></label>
+                <input type="number" id="amount" placeholder="0.00" min="1" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label>Remarks / Narration</label>
+                <input type="text" id="note" placeholder="e.g. Invoice payment #INV-2024-0042">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="sendBtn">
+              🔐 Send Quantum-Secured Transfer
+            </button>
+            <div class="input-note" style="text-align:center;margin-top:8px">
+              Transfer will be encrypted using AES-256-GCM with a quantum-derived key
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Transfer Summary / Proof Panel -->
+      <div>
+        <div class="transfer-summary" id="transferSummary">
+          <h4 style="font-family:'Poppins';font-size:14px;font-weight:600;color:var(--text-dark);margin-bottom:16px">Transfer Security Summary</h4>
+
+          <div class="summary-row">
+            <span class="sr-label">Key Exchange</span>
+            <span class="sr-value">BB84 (Qiskit)</span>
+          </div>
+          <div class="summary-row">
+            <span class="sr-label">Simulator</span>
+            <span class="sr-value">AerSimulator</span>
+          </div>
+          <div class="summary-row">
+            <span class="sr-label">Qubits Used</span>
+            <span class="sr-value">768</span>
+          </div>
+          <div class="summary-row">
+            <span class="sr-label">Privacy Amp.</span>
+            <span class="sr-value">Toeplitz Matrix</span>
+          </div>
+          <div class="summary-row">
+            <span class="sr-label">Key Derivation</span>
+            <span class="sr-value">HKDF-SHA256</span>
+          </div>
+          <div class="summary-row">
+            <span class="sr-label">Encryption</span>
+            <span class="sr-value">AES-256-GCM</span>
+          </div>
+
+          <div class="quantum-seal" id="quantumSeal">
+            <div class="seal-icon">🛡️</div>
+            <div class="seal-text">Quantum-Secured Transaction</div>
+            <div class="seal-details" id="sealDetails">Awaiting transaction initiation...</div>
+          </div>
+
+          <div id="txProof" style="margin-top:16px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ ALL TRANSACTIONS ═══════════════ -->
+  <section class="page-section" id="page-transactions">
+    <div class="card">
+      <div class="card-header">
+        <h3>📋 Transaction History</h3>
+        <span class="badge badge-info" id="txTotalBadge">0 transactions</span>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead>
+            <tr>
+              <th>TX ID</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Amount (₹)</th>
+              <th>QBER</th>
+              <th>Encrypted Payload</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="txBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px">No transactions found.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ SECURITY CENTER ═══════════════ -->
+  <section class="page-section" id="page-security">
+
+    <div class="escalation-strip l1" id="escStrip">
+      🛡️ Security Level: NORMAL — All quantum channels operational
+    </div>
+
+    <div class="security-grid">
+      <div class="sec-metric">
+        <div class="sm-label">Quantum Bit Error Rate</div>
+        <div class="sm-value" id="secQber" style="color:var(--success)">0.00%</div>
+      </div>
+      <div class="sec-metric">
+        <div class="sm-label">Channel Status</div>
+        <div class="sm-value" id="secEve" style="color:var(--success)">SECURE</div>
+      </div>
+      <div class="sec-metric">
+        <div class="sm-label">Threats Detected</div>
+        <div class="sm-value" id="secAttacks">0</div>
+      </div>
+      <div class="sec-metric">
+        <div class="sm-label">Escalation Level</div>
+        <div class="sm-value" id="secLevel">L1</div>
+      </div>
+    </div>
+
+    <div class="security-grid">
+      <div class="sec-metric">
+        <div class="sm-label">Active Port</div>
+        <div class="sm-value" id="secPort" style="font-size:18px">1919</div>
+      </div>
+      <div class="sec-metric">
+        <div class="sm-label">Active IP</div>
+        <div class="sm-value" id="secIP" style="font-size:16px">192.168.1.100</div>
+      </div>
+      <div class="sec-metric">
+        <div class="sm-label">Network</div>
+        <div class="sm-value" id="secNet" style="font-size:14px">192.168.1.0/24</div>
+      </div>
+      <div class="sec-metric">
+        <div class="sm-label">Total Sessions</div>
+        <div class="sm-value" id="secSessions">0</div>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="card-header">
+        <h3>📈 QBER Monitoring — Live</h3>
+        <span class="badge badge-info">Auto-refresh 3s</span>
+      </div>
+      <div class="card-body-padded">
+        <div class="chart-container">
+          <canvas id="qberChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ KEY SESSIONS ═══════════════ -->
+  <section class="page-section" id="page-sessions">
+    <div class="card">
+      <div class="card-header">
+        <h3>🔑 BB84 Key Exchange Sessions</h3>
+        <button class="btn btn-outline btn-sm" onclick="refreshSessions()">Refresh</button>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead>
+            <tr>
+              <th>Session ID</th>
+              <th>Parties</th>
+              <th>QBER</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="sessionsBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:40px">No key sessions recorded.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="bank-footer">
+  <p>
+    FinQuantum Bank Ltd. | CIN: U65100MH2024PLC000000 | RBI Reg. No. FQBL/2024/001<br>
+    Secured by BB84 Quantum Key Distribution • Qiskit AerSimulator • AES-256-GCM • HKDF-SHA256<br>
+    © 2024 FinQuantum Bank. All rights reserved. | Privacy Policy | Terms & Conditions
+  </p>
+</footer>
+
+<script src="/static/app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+#!/bin/sh
+# =============================================================================
+# WPS Button → Quantum Panic Button Handler
+# =============================================================================
+# OpenWrt calls this script via /etc/rc.button/wps
+# $ACTION = "released" when button is let go
+# $SEEN   = seconds the button was held
+#
+# Short press (<3s):  Escalate threat level by +1
+# Long press  (>=3s): Immediate LOCKDOWN (Level 4)
+#
+# To CLEAR panic lockdown:
+#   rm /tmp/quantum_panic && /usr/bin/lockdownctl 1 && /usr/bin/ledctl 1
+# =============================================================================
+
+[ "$ACTION" = "released" ] || exit 0
+
+LOG_TAG="panic_button"
+STATE_FILE="/tmp/quantum_state.json"
+
+if [ "$SEEN" -ge 3 ]; then
+    # ── LONG PRESS — FULL LOCKDOWN ────────────────────────────────────────
+    logger -t "$LOG_TAG" "LONG PRESS ($SEEN sec) — LOCKDOWN ACTIVATED"
+    touch /tmp/quantum_panic
+    /usr/bin/ledctl 4
+    /usr/bin/lockdownctl 4
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] PANIC: Manual lockdown by WPS long press (${SEEN}s)" >> /tmp/quantum.log
+
+elif [ "$SEEN" -gt 0 ]; then
+    # ── SHORT PRESS — ESCALATE +1 ────────────────────────────────────────
+    CURRENT=1
+    if [ -f "$STATE_FILE" ] && command -v jsonfilter >/dev/null 2>&1; then
+        CURRENT=$(jsonfilter -i "$STATE_FILE" -e '@.level' 2>/dev/null)
+        [ -z "$CURRENT" ] && CURRENT=1
+    fi
+
+    NEXT=$((CURRENT + 1))
+    [ "$NEXT" -gt 4 ] && NEXT=4
+
+    logger -t "$LOG_TAG" "SHORT PRESS ($SEEN sec) — escalate L$CURRENT -> L$NEXT"
+    /usr/bin/ledctl "$NEXT"
+    /usr/bin/lockdownctl "$NEXT"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ESCALATE: WPS press L$CURRENT -> L$NEXT" >> /tmp/quantum.log
+fi

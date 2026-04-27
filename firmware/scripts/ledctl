@@ -1,0 +1,93 @@
+#!/bin/sh
+# =============================================================================
+# ledctl — LED Threat Level Indicator for OpenWrt
+# =============================================================================
+# Sets router LEDs based on quantum threat level (1-4).
+# Auto-discovers available LEDs via sysfs and uses fallback blink patterns.
+# Usage: ledctl <level>
+# =============================================================================
+
+LEVEL="${1:-1}"
+LED_DIR="/sys/class/leds"
+
+# ── LED Discovery ────────────────────────────────────────────────────────────
+find_led() {
+    ls "$LED_DIR" 2>/dev/null | grep -i "$1" | head -1
+}
+
+LED_POWER=$(find_led "power")
+LED_WLAN=$(find_led "wlan\|wifi\|wireless")
+LED_USB=$(find_led "usb")
+LED_WPS=$(find_led "wps")
+LED_INET=$(find_led "internet\|inet\|wan")
+LED_DSL=$(find_led "dsl\|adsl")
+
+# ── LED Control Functions ────────────────────────────────────────────────────
+set_led_on() {
+    local led="$1"
+    [ -z "$led" ] && return
+    [ -d "$LED_DIR/$led" ] || return
+    echo "none" > "$LED_DIR/$led/trigger" 2>/dev/null
+    echo 1 > "$LED_DIR/$led/brightness" 2>/dev/null
+}
+
+set_led_off() {
+    local led="$1"
+    [ -z "$led" ] && return
+    [ -d "$LED_DIR/$led" ] || return
+    echo "none" > "$LED_DIR/$led/trigger" 2>/dev/null
+    echo 0 > "$LED_DIR/$led/brightness" 2>/dev/null
+}
+
+set_led_blink() {
+    local led="$1" on="$2" off="$3"
+    [ -z "$led" ] && return
+    [ -d "$LED_DIR/$led" ] || return
+    echo "timer" > "$LED_DIR/$led/trigger" 2>/dev/null
+    echo "$on" > "$LED_DIR/$led/delay_on" 2>/dev/null
+    echo "$off" > "$LED_DIR/$led/delay_off" 2>/dev/null
+}
+
+all_off() {
+    for led in $(ls "$LED_DIR" 2>/dev/null); do
+        set_led_off "$led"
+    done
+}
+
+# ── Apply LED Pattern ────────────────────────────────────────────────────────
+case "$LEVEL" in
+    1)  # ── SAFE — Power solid green, all others off
+        all_off
+        set_led_on "$LED_POWER"
+        logger -t ledctl "L1 SAFE — power LED solid"
+        ;;
+
+    2)  # ── SUSPICIOUS — Power solid + WLAN slow blink
+        all_off
+        set_led_on "$LED_POWER"
+        set_led_blink "$LED_WLAN" 1000 1000
+        logger -t ledctl "L2 SUSPICIOUS — wlan blink slow"
+        ;;
+
+    3)  # ── ATTACK LIKELY — Power blink + WLAN fast blink + WPS blink
+        all_off
+        set_led_blink "$LED_POWER" 250 250
+        set_led_blink "$LED_WLAN" 250 250
+        set_led_blink "$LED_WPS" 500 500
+        [ -n "$LED_USB" ] && set_led_blink "$LED_USB" 500 500
+        logger -t ledctl "L3 ATTACK — rapid blink pattern"
+        ;;
+
+    4)  # ── LOCKDOWN — ALL LEDs blink rapidly (alarm pattern)
+        for led in $(ls "$LED_DIR" 2>/dev/null); do
+            echo "timer" > "$LED_DIR/$led/trigger" 2>/dev/null
+            echo 100 > "$LED_DIR/$led/delay_on" 2>/dev/null
+            echo 100 > "$LED_DIR/$led/delay_off" 2>/dev/null
+        done
+        logger -t ledctl "L4 LOCKDOWN — all LEDs alarm blink"
+        ;;
+
+    *)
+        logger -t ledctl "Unknown level: $LEVEL"
+        ;;
+esac

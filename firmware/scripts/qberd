@@ -1,0 +1,167 @@
+#!/bin/sh
+# =============================================================================
+# qberd — Quantum Policy Daemon for OpenWrt
+# =============================================================================
+# Polls KMS /link_status, evaluates QBER-based threat level,
+# writes state to /tmp/quantum_state.json, triggers LED + firewall actions.
+#
+# Designed for BusyBox/ash on OpenWrt (D-Link DSL-2750U target).
+# =============================================================================
+
+# ── Load UCI config ──────────────────────────────────────────────────────────
+if [ -f /lib/functions.sh ]; then
+    . /lib/functions.sh
+    config_load quantum 2>/dev/null
+    config_get KMS_HOST main kms_host "192.168.1.100"
+    config_get KMS_PORT main kms_port "8000"
+    config_get POLL main poll_interval "3"
+    config_get T2 main threshold_l2 "0.05"
+    config_get T3 main threshold_l3 "0.11"
+    config_get T4 main threshold_l4 "0.25"
+else
+    # Fallback defaults if UCI not available (testing on non-OpenWrt)
+    KMS_HOST="192.168.1.100"
+    KMS_PORT="8000"
+    POLL=3
+    T2="0.05"
+    T3="0.11"
+    T4="0.25"
+fi
+
+STATE_FILE="/tmp/quantum_state.json"
+LOG_FILE="/tmp/quantum.log"
+CURRENT_LEVEL=1
+KMS_URL="http://${KMS_HOST}:${KMS_PORT}/link_status"
+FAIL_COUNT=0
+MAX_FAILS=5
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+log_event() {
+    local ts
+    ts=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$ts] [qberd] $*" >> "$LOG_FILE"
+    echo "[$ts] [qberd] $*"
+}
+
+# ── Float comparison via awk (BusyBox safe) ──────────────────────────────────
+float_ge() {
+    echo "$1 $2" | awk '{if ($1 >= $2) exit 0; else exit 1}'
+}
+
+# ── Threat level calculation ─────────────────────────────────────────────────
+calc_threat_level() {
+    local qber="$1"
+    local attack="$2"
+
+    if [ "$attack" = "true" ] || float_ge "$qber" "$T4"; then
+        echo 4
+    elif float_ge "$qber" "$T3"; then
+        echo 3
+    elif float_ge "$qber" "$T2"; then
+        echo 2
+    else
+        echo 1
+    fi
+}
+
+# ── State file writer ───────────────────────────────────────────────────────
+write_state() {
+    cat > "$STATE_FILE" <<EOF
+{
+  "level": $1,
+  "qber": $2,
+  "status": "$3",
+  "attack_detected": $4,
+  "timestamp": "$(date -Iseconds 2>/dev/null || date)",
+  "kms_reachable": $5,
+  "panic": $6
+}
+EOF
+}
+
+# ── Apply level change ──────────────────────────────────────────────────────
+apply_level() {
+    local new_level="$1"
+    if [ "$new_level" -ne "$CURRENT_LEVEL" ]; then
+        log_event "LEVEL CHANGE: L$CURRENT_LEVEL -> L$new_level"
+        CURRENT_LEVEL=$new_level
+        /usr/bin/ledctl "$CURRENT_LEVEL" 2>/dev/null
+        /usr/bin/lockdownctl "$CURRENT_LEVEL" 2>/dev/null
+    fi
+}
+
+# ── USB log flush ────────────────────────────────────────────────────────────
+flush_to_usb() {
+    local usb_log_dir="/mnt/usb/quantum-logs"
+    if mountpoint -q /mnt/usb 2>/dev/null && [ -d "$usb_log_dir" ]; then
+        cp "$LOG_FILE" "$usb_log_dir/quantum_$(date +%Y%m%d_%H%M%S).log" 2>/dev/null
+    fi
+}
+
+# ── Startup ──────────────────────────────────────────────────────────────────
+log_event "=== qberd starting ==="
+log_event "KMS endpoint: $KMS_URL"
+log_event "Poll interval: ${POLL}s"
+log_event "Thresholds: L2=$T2 L3=$T3 L4=$T4"
+write_state 1 0.0 "GREEN" false true false
+
+# ── Main polling loop ───────────────────────────────────────────────────────
+while true; do
+    # Poll KMS
+    RESPONSE=$(wget -qO- "$KMS_URL" 2>/dev/null)
+
+    if [ -z "$RESPONSE" ]; then
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        log_event "KMS unreachable (fail $FAIL_COUNT/$MAX_FAILS)"
+
+        if [ "$FAIL_COUNT" -ge "$MAX_FAILS" ]; then
+            log_event "KMS LOST — escalating to L3 as safe default"
+            apply_level 3
+            write_state 3 1.0 "UNKNOWN" false false false
+        fi
+
+        sleep "$POLL"
+        continue
+    fi
+
+    FAIL_COUNT=0
+
+    # Parse JSON — prefer jsonfilter (OpenWrt), fallback to grep/sed
+    if command -v jsonfilter >/dev/null 2>&1; then
+        STATUS=$(echo "$RESPONSE" | jsonfilter -e '@.status' 2>/dev/null)
+        QBER=$(echo "$RESPONSE" | jsonfilter -e '@.qber' 2>/dev/null)
+        ATTACK=$(echo "$RESPONSE" | jsonfilter -e '@.attack_detected' 2>/dev/null)
+        EVE=$(echo "$RESPONSE" | jsonfilter -e '@.eve_mode' 2>/dev/null)
+    else
+        # BusyBox grep/sed fallback
+        STATUS=$(echo "$RESPONSE" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+        QBER=$(echo "$RESPONSE" | grep -o '"qber":[0-9.]*' | head -1 | cut -d':' -f2)
+        ATTACK=$(echo "$RESPONSE" | grep -o '"attack_detected":[a-z]*' | head -1 | cut -d':' -f2)
+        EVE=$(echo "$RESPONSE" | grep -o '"eve_mode":[a-z]*' | head -1 | cut -d':' -f2)
+    fi
+
+    [ -z "$STATUS" ] && STATUS="UNKNOWN"
+    [ -z "$QBER" ] && QBER="0.0"
+    [ -z "$ATTACK" ] && ATTACK="false"
+
+    # Check panic override
+    PANIC=false
+    if [ -f /tmp/quantum_panic ]; then
+        PANIC=true
+        NEW_LEVEL=4
+        log_event "PANIC OVERRIDE ACTIVE — forcing L4"
+    else
+        NEW_LEVEL=$(calc_threat_level "$QBER" "$ATTACK")
+    fi
+
+    # Write state and apply
+    write_state "$NEW_LEVEL" "$QBER" "$STATUS" "$ATTACK" true "$PANIC"
+    apply_level "$NEW_LEVEL"
+
+    # Flush logs to USB at level 3+
+    if [ "$NEW_LEVEL" -ge 3 ]; then
+        flush_to_usb
+    fi
+
+    sleep "$POLL"
+done

@@ -1,0 +1,8 @@
+__pycache__/
+.pytest_cache/
+err.txt
+out.txt
+test_output.txt
+test_results.txt
+final_test_results.txt
+out_utf8.txt

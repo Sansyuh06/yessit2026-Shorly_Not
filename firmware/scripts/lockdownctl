@@ -1,0 +1,94 @@
+#!/bin/sh
+# =============================================================================
+# lockdownctl — Firewall Lockdown Manager for OpenWrt
+# =============================================================================
+# Applies iptables firewall rules based on quantum threat level.
+# Always preserves SSH admin access as recovery path.
+# Usage: lockdownctl <level>
+# =============================================================================
+
+LEVEL="${1:-1}"
+
+# ── Load config ──────────────────────────────────────────────────────────────
+if [ -f /lib/functions.sh ]; then
+    . /lib/functions.sh
+    config_load quantum 2>/dev/null
+    config_get ADMIN_PORT main admin_port "22"
+    config_get KILL_WIFI main lockdown_kill_wifi "1"
+    config_get KMS_PORT main kms_port "8000"
+else
+    ADMIN_PORT="22"
+    KILL_WIFI="1"
+    KMS_PORT="8000"
+fi
+
+# ── Check iptables ───────────────────────────────────────────────────────────
+if ! command -v iptables >/dev/null 2>&1; then
+    logger -t lockdownctl "iptables not found — cannot apply firewall rules"
+    echo "[lockdownctl] ERROR: iptables not found"
+    exit 1
+fi
+
+# ── Ensure QUANTUM chain exists ──────────────────────────────────────────────
+iptables -N QUANTUM 2>/dev/null
+iptables -C FORWARD -j QUANTUM 2>/dev/null || iptables -I FORWARD 1 -j QUANTUM
+iptables -C INPUT -j QUANTUM 2>/dev/null || iptables -I INPUT 1 -j QUANTUM
+
+# ── Flush and rebuild ────────────────────────────────────────────────────────
+iptables -F QUANTUM
+
+case "$LEVEL" in
+    1)  # ── SAFE — normal forwarding
+        iptables -A QUANTUM -j RETURN
+        # Restore Wi-Fi if it was killed
+        wifi up 2>/dev/null
+        logger -t lockdownctl "L1 SAFE — all traffic allowed"
+        ;;
+
+    2)  # ── SUSPICIOUS — rate-limit, allow most traffic
+        # Rate-limit HTTP/HTTPS
+        iptables -A QUANTUM -p tcp --dport 443 -m limit --limit 50/min --limit-burst 20 -j RETURN
+        iptables -A QUANTUM -p tcp --dport 80 -m limit --limit 50/min --limit-burst 20 -j RETURN
+        # Always allow admin + KMS + DNS
+        iptables -A QUANTUM -p tcp --dport "$ADMIN_PORT" -j RETURN
+        iptables -A QUANTUM -p tcp --dport "$KMS_PORT" -j RETURN
+        iptables -A QUANTUM -p udp --dport 53 -j RETURN
+        iptables -A QUANTUM -j RETURN
+        logger -t lockdownctl "L2 SUSPICIOUS — rate limiting active"
+        ;;
+
+    3)  # ── ATTACK LIKELY — block non-essential, keep admin + DNS + KMS
+        iptables -A QUANTUM -p tcp --dport "$ADMIN_PORT" -j ACCEPT
+        iptables -A QUANTUM -p tcp --dport "$KMS_PORT" -j ACCEPT
+        iptables -A QUANTUM -p udp --dport 53 -j ACCEPT
+        iptables -A QUANTUM -p tcp --dport 53 -j ACCEPT
+        # Allow established connections to finish
+        iptables -A QUANTUM -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+        # Drop new connections
+        iptables -A QUANTUM -p tcp --syn -j DROP
+        iptables -A QUANTUM -j RETURN
+        logger -t lockdownctl "L3 ATTACK — non-essential blocked"
+        ;;
+
+    4)  # ── LOCKDOWN — drop everything except SSH admin
+        # CRITICAL: Always keep admin SSH alive for recovery
+        iptables -A QUANTUM -p tcp --dport "$ADMIN_PORT" -j ACCEPT
+        # Keep DNS for admin lookups
+        iptables -A QUANTUM -p udp --dport 53 -j ACCEPT
+        # Drop everything else
+        iptables -A QUANTUM -j DROP
+
+        # Kill Wi-Fi radios
+        if [ "$KILL_WIFI" = "1" ]; then
+            wifi down 2>/dev/null
+            logger -t lockdownctl "Wi-Fi DISABLED"
+        fi
+
+        logger -t lockdownctl "L4 LOCKDOWN — all traffic blocked, SSH preserved"
+        ;;
+
+    *)
+        logger -t lockdownctl "Unknown level: $LEVEL — defaulting to SAFE"
+        iptables -A QUANTUM -j RETURN
+        ;;
+esac
