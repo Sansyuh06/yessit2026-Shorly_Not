@@ -1,0 +1,70 @@
+#!/bin/sh
+# =============================================================================
+# USB Hotplug Handler for Quantum Log Storage
+# =============================================================================
+# Place at: /etc/hotplug.d/usb/20-quantum-usb
+# Detects USB insert/remove, auto-mounts, creates log directory,
+# and copies existing quantum logs to USB.
+# =============================================================================
+
+USB_MOUNT="/mnt/usb"
+LOG_DIR="quantum-logs"
+STATUS_FILE="/tmp/quantum_usb_status"
+
+case "$ACTION" in
+    add)
+        logger -t quantum-usb "USB device inserted — attempting mount"
+        sleep 2  # Wait for block device to appear
+
+        mkdir -p "$USB_MOUNT"
+
+        # Try common device paths
+        MOUNTED=0
+        for dev in /dev/sda1 /dev/sda /dev/sdb1 /dev/sdb; do
+            if [ -b "$dev" ]; then
+                mount "$dev" "$USB_MOUNT" 2>/dev/null
+                if mountpoint -q "$USB_MOUNT"; then
+                    MOUNTED=1
+                    break
+                fi
+            fi
+        done
+
+        if [ "$MOUNTED" -eq 1 ]; then
+            mkdir -p "$USB_MOUNT/$LOG_DIR"
+            echo "USB_READY" > "$STATUS_FILE"
+            logger -t quantum-usb "USB mounted at $USB_MOUNT — quantum logging enabled"
+
+            # Copy existing logs
+            if [ -f /tmp/quantum.log ]; then
+                cp /tmp/quantum.log \
+                   "$USB_MOUNT/$LOG_DIR/quantum_$(date +%Y%m%d_%H%M%S).log" 2>/dev/null
+                logger -t quantum-usb "Existing logs copied to USB"
+            fi
+
+            # Update LED — blink USB LED to confirm
+            USB_LED=$(ls /sys/class/leds/ 2>/dev/null | grep -i usb | head -1)
+            if [ -n "$USB_LED" ]; then
+                echo "timer" > "/sys/class/leds/$USB_LED/trigger" 2>/dev/null
+                echo 500 > "/sys/class/leds/$USB_LED/delay_on" 2>/dev/null
+                echo 500 > "/sys/class/leds/$USB_LED/delay_off" 2>/dev/null
+            fi
+        else
+            echo "USB_MOUNT_FAILED" > "$STATUS_FILE"
+            logger -t quantum-usb "USB mount FAILED — no suitable partition found"
+        fi
+        ;;
+
+    remove)
+        logger -t quantum-usb "USB device removed — reverting to RAM logging"
+        echo "USB_REMOVED" > "$STATUS_FILE"
+        umount "$USB_MOUNT" 2>/dev/null
+
+        # Turn off USB LED
+        USB_LED=$(ls /sys/class/leds/ 2>/dev/null | grep -i usb | head -1)
+        if [ -n "$USB_LED" ]; then
+            echo "none" > "/sys/class/leds/$USB_LED/trigger" 2>/dev/null
+            echo 0 > "/sys/class/leds/$USB_LED/brightness" 2>/dev/null
+        fi
+        ;;
+esac
