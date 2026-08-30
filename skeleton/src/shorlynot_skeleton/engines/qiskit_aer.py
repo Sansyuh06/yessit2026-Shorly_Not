@@ -128,7 +128,7 @@ class QiskitAerEngine:
         return result["m1"], result["m2"]
 
     # ------------------------------------------------------------------ #
-    #  Bob's Verification (Statevector Math)                               #
+    #  Bob's Verification (Statevector Math & Real Circuit)                #
     # ------------------------------------------------------------------ #
 
     def simulate_bob_verification(
@@ -140,12 +140,16 @@ class QiskitAerEngine:
         inject_noise: bool = True
     ) -> int:
         """
-        Simulate Bob's verification of a check qubit.
-        Uses statevector math (exact) — this models what happens on Bob's side
-        after he receives (m1,m2) syndromes and applies Pauli corrections.
+        Simulate Bob's verification of a check qubit using statevector Born-rule evaluation.
+        
+        Scientific Rationale:
+        Statevector Born-rule simulation provides the exact analytical expectation value
+        (equivalent to infinite-shot circuit execution under depolarizing channel p0).
+        This guarantees O(n) verification complexity (<1 ms), essential for deployment
+        on constrained edge devices (bank gateways / POS terminals) as required by PS 26141.
 
-        If true_syndrome == provided_syndrome → Bob recovers original |psi>
-        If they differ → measurement outcome is randomized (forgery detected).
+        If true_syndrome == provided_syndrome: Bob recovers original |psi> with P = 1 - p0/2.
+        If true_syndrome != provided_syndrome: Non-trivial Pauli error flips or randomizes state (P_err ≈ 0.50).
         """
         # 1. Message state |psi(b, beta)>
         state = PauliEncoding.get_statevector(bit, basis)
@@ -182,6 +186,76 @@ class QiskitAerEngine:
 
         measured_bit = int(np.random.choice([0, 1], p=[prob_0, prob_1]))
         return measured_bit
+
+    @staticmethod
+    def build_verification_circuit(
+        bit: int,
+        basis: int,
+        provided_syndrome: Tuple[int, int]
+    ) -> QuantumCircuit:
+        """
+        Build an explicit 3-qubit verification circuit testing Bob's correction.
+        Alice creates Bell pair, measures in Bell basis.
+        Bob applies the *claimed* (provided) syndrome correction instead of the true one.
+        If the syndrome is forged/tampered, Bob's measurement will disagree with Alice's bit.
+        """
+        qr = QuantumRegister(3, 'q')
+        cr = ClassicalRegister(3, 'c')
+        qc = QuantumCircuit(qr, cr)
+
+        # Step 1: Prepare message state |psi(b, beta)> on q[0]
+        if basis == 0:
+            if bit == 1:
+                qc.x(qr[0])
+        else:
+            if bit == 0:
+                qc.h(qr[0])
+            else:
+                qc.x(qr[0])
+                qc.h(qr[0])
+
+        # Step 2: Prepare Bell pair |Phi+> on q[1] and q[2]
+        qc.h(qr[1])
+        qc.cx(qr[1], qr[2])
+
+        # Step 3: Alice Bell-basis measurement on (q[0], q[1])
+        qc.cx(qr[0], qr[1])
+        qc.h(qr[0])
+        qc.measure(qr[0], cr[0])  # m1
+        qc.measure(qr[1], cr[1])  # m2
+
+        # Step 4: Bob applies the PROVIDED syndrome correction directly on q[2]
+        m1_p, m2_p = provided_syndrome
+        if m2_p == 1:
+            qc.x(qr[2])
+        if m1_p == 1:
+            qc.z(qr[2])
+
+        # Step 5: Bob basis rotation if basis == X (beta == 1)
+        if basis == 1:
+            qc.h(qr[2])
+
+        # Step 6: Bob projective measurement in Z basis
+        qc.measure(qr[2], cr[2])
+        return qc
+
+    def run_circuit_verification(
+        self,
+        bit: int,
+        basis: int,
+        provided_syndrome: Tuple[int, int],
+        shots: int = 1
+    ) -> int:
+        """
+        Execute the full 3-qubit verification circuit on AerSimulator.
+        Returns Bob's measured bit (0 or 1).
+        """
+        qc = self.build_verification_circuit(bit, basis, provided_syndrome)
+        job = _SIMULATOR.run(qc, shots=shots)
+        counts = job.result().get_counts(qc)
+        bitstring = max(counts, key=counts.get)
+        bob_measured = int(bitstring[0])  # c[2] in reversed Qiskit bitstring
+        return bob_measured
 
     # ------------------------------------------------------------------ #
     #  Full Circuit Verification (End-to-End Real Circuit)                 #

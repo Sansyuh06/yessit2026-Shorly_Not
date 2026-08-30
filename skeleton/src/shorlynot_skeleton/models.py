@@ -50,6 +50,7 @@ class QuantumBackend(str, Enum):
 
 class QuantumEngine(str, Enum):
     QISKIT = "qiskit"
+    PENNYLANE = "pennylane"
 
 
 class SignatureBundle(BaseModel):

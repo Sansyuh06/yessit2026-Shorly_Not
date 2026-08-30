@@ -87,25 +87,44 @@
           </div>
         </div>
 
-        <!-- Mathematical Parameters -->
-        <table class="params-table">
-          <tr>
-            <td>Noise Floor ($p_0$)</td>
-            <td>0.02 (2.0%)</td>
-          </tr>
-          <tr>
-            <td>Check Positions ($n$)</td>
-            <td>64 Qubits</td>
-          </tr>
-          <tr>
-            <td>False-Reject Budget ($\delta$)</td>
-            <td>0.01 (Normal Preset)</td>
-          </tr>
-          <tr>
-            <td>Theoretical $P_{\text{forge}}$</td>
-            <td>&lt; 9.40 &times; 10<sup>-7</sup></td>
-          </tr>
-        </table>
+        <!-- Information-Theoretic Security & Hoeffding Bounds Card -->
+        <div style="background: rgba(0, 242, 254, 0.03); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--soc-accent); text-transform: uppercase;">
+              Information-Theoretic Security ($P_{\text{forge}}$)
+            </span>
+            <span id="soc-pforge-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-family: var(--soc-mono); font-size: 0.8rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.4);">
+              P_forge: 9.40 &times; 10<sup>-7</sup>
+            </span>
+          </div>
+
+          <div style="font-family: var(--soc-mono); font-size: 0.75rem; color: var(--soc-text-dim); margin-bottom: 0.6rem;">
+            Bound Formula: $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}} \quad | \quad P_{\text{forge}} = \sum_{k=0}^{\lfloor \tau n \rfloor} \binom{n}{k} (0.5)^n$
+          </div>
+
+          <table class="params-table">
+            <tr>
+              <td>Noise Floor ($p_0$)</td>
+              <td id="soc-p0-val">0.02 (2.0%)</td>
+            </tr>
+            <tr>
+              <td>Check Positions ($n$)</td>
+              <td id="soc-n-val">64 Qubits</td>
+            </tr>
+            <tr>
+              <td>False-Reject Budget ($\delta$)</td>
+              <td id="soc-delta-val">0.01 (Normal Preset)</td>
+            </tr>
+            <tr>
+              <td>Current Bound ($\tau$)</td>
+              <td id="soc-tau-param-val" style="color: #ff0055; font-weight: bold;">0.2097</td>
+            </tr>
+            <tr>
+              <td>Adversary Model</td>
+              <td>Unentangled ($\rho_B = \frac{1}{2}I \implies \mathbb{E}[\hat{p}] = 0.50$)</td>
+            </tr>
+          </table>
+        </div>
       </div>
 
       <!-- Pauli Correction Matrix -->

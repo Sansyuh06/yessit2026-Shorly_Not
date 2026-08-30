@@ -99,8 +99,11 @@ class QstdfClassifier:
         # STEP 2: IMPERSONATION (Signer Key ID Binding Check)
         # -------------------------------------------------------------
         if claimed_signer:
+            from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
+            is_valid_in_registry = GLOBAL_KEY_REGISTRY.validate_key_binding(bundle.key_id, claimed_signer)
             expected_key = self.key_bindings.get(claimed_signer)
-            if not expected_key or bundle.key_id != expected_key:
+            
+            if not is_valid_in_registry and (not expected_key or bundle.key_id != expected_key):
                 return ThreatClassification(
                     label=ThreatLabel.IMPERSONATION,
                     passed=False,

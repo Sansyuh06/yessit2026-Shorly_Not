@@ -251,6 +251,46 @@ def get_metrics() -> MetricSummary:
     )
 
 
+class KeyGenerateRequest(BaseModel):
+    user_id: str = Field(..., description="Identity to provision keys for")
+    role: str = Field(default="customer", description="Role: customer | attacker | soc")
+    custom_key_id: Optional[str] = Field(default=None)
+
+
+class KeyRegisterRequest(BaseModel):
+    user_id: str
+    key_id: str
+    qkd_session_id: str
+    key_fingerprint: str
+    role: str = "customer"
+
+
+@app.post("/v1/keys/generate")
+def generate_key_pair(req: KeyGenerateRequest) -> Dict[str, Any]:
+    """
+    Execute simulated QKD ceremony (BB84) to provision a new quantum-bound key pair for a user.
+    """
+    from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
+    record = GLOBAL_KEY_REGISTRY.provision_key_pair(
+        user_id=req.user_id,
+        role=req.role,
+        custom_key_id=req.custom_key_id
+    )
+    pipeline.classifier.register_key(req.user_id, record.key_id)
+    return {
+        "status": "success",
+        "message": f"Quantum key '{record.key_id}' successfully provisioned via BB84 for '{req.user_id}'.",
+        "key_record": record.model_dump()
+    }
+
+
+@app.get("/v1/keys/list")
+def list_keys() -> List[Dict[str, Any]]:
+    """List all active registered quantum keys in the registry."""
+    from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
+    return [k.model_dump() for k in GLOBAL_KEY_REGISTRY.list_keys()]
+
+
 @app.post("/v1/admin/reseed")
 def admin_reseed() -> Dict[str, Any]:
     """Reseed demo state, stages, and replay cache."""

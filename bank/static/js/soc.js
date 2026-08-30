@@ -12,6 +12,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const feedBodyElem = document.getElementById('soc-feed-body');
   const backendBadgeElem = document.getElementById('soc-backend-badge');
 
+  const pforgeBadgeElem = document.getElementById('soc-pforge-badge');
+  const tauParamValElem = document.getElementById('soc-tau-param-val');
+
+  function calculatePForge(n, tau) {
+    const kMax = Math.floor(tau * n);
+    let sum = 0.0;
+    for (let k = 0; k <= kMax; k++) {
+      let logComb = 0;
+      for (let i = 1; i <= k; i++) {
+        logComb += Math.log(n - i + 1) - Math.log(i);
+      }
+      const prob = Math.exp(logComb - n * Math.LN2);
+      sum += prob;
+    }
+    return sum;
+  }
+
   async function fetchSocFeed() {
     try {
       const res = await fetch('/api/soc/feed');
@@ -47,8 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update Mismatch and Tau
       const mismatch = data.stages.last_mismatch || 0.0;
       const tau = data.stages.tau || 0.2097;
+      const n = data.stages.n || 64;
       mismatchValElem.textContent = mismatch.toFixed(4);
       tauValElem.textContent = tau.toFixed(4);
+      if (tauParamValElem) tauParamValElem.textContent = tau.toFixed(4);
+
+      // Compute and update P_forge
+      if (pforgeBadgeElem) {
+        const pForgeVal = calculatePForge(n, tau);
+        if (pForgeVal < 1e-12) {
+          pforgeBadgeElem.innerHTML = `P_forge: &lt; 10<sup>-12</sup>`;
+        } else {
+          pforgeBadgeElem.innerHTML = `P_forge: ${pForgeVal.toExponential(2)}`;
+        }
+      }
 
       // Meter fill (scale to 0.70 max)
       const fillPct = Math.min(100, Math.max(2, (mismatch / 0.60) * 100));

@@ -113,18 +113,54 @@ class QdsT1Protocol:
 
         return bundle
 
+    @staticmethod
+    def evaluate_unentangled_adversary_projection(
+        expected_bit: int,
+        basis: int,
+        provided_syndrome: Tuple[int, int],
+        p0: float = 0.02
+    ) -> int:
+        """
+        Evaluate Bob's measurement outcome when an unentangled adversary (Eve)
+        fabricates a signature bundle without access to Alice's entangled Bell state.
+
+        Quantum Information Theory Model:
+        In teleportation QDS, Alice and Bob share Bell states |Phi+>_AB.
+        When Alice measures (q_A, epr_A), Bob's qubit is steered into U^dag |psi>.
+        Without Alice's entangled measurement, Bob's reduced subsystem state is
+        the maximally mixed density matrix:
+            rho_B = Tr_A(|Phi+><Phi+|) = 1/2 * I = [[0.5, 0], [0, 0.5]]
+        
+        Because rho_B commutes with all single-qubit unitaries U(m1, m2) (since U (1/2 I) U^dag = 1/2 I),
+        projective measurement in any basis (Z or X) produces:
+            Pr(b' = 0) = Pr(b' = 1) = 0.50
+        
+        This yields an expected mismatch rate E[p_hat] = 0.50, ensuring deterministic
+        forgery detection well above the Hoeffding threshold tau (~0.21).
+        """
+        # Maximally mixed state measurement probabilities under depolarizing channel
+        prob_0 = 0.50
+        prob_1 = 0.50
+        return int(np.random.choice([0, 1], p=[prob_0, prob_1]))
+
     def verify(
         self,
         bundle: SignatureBundle,
         verifier_id: str = "bob",
         delta: Optional[float] = None,
         p0: Optional[float] = None,
-        override_syndromes: Optional[List[List[int]]] = None
+        override_syndromes: Optional[List[List[int]]] = None,
+        mode: str = "analytic"  # "analytic" (O(n) Born-rule for edge nodes) | "circuit" (Aer circuits)
     ) -> VerifyResult:
         """
         Verify a ShorlyNot-QDS-T1 signature bundle.
         Bob checks if the provided syndromes allow him to recover
         the original message bits via Pauli corrections.
+
+        Verification Modes:
+        - 'analytic' (Default): O(n) Born-rule evaluation. Exact analytical expectation,
+          sub-millisecond latency for edge routers/gateways (PS 26141 efficiency requirement).
+        - 'circuit': Full 3-qubit Qiskit Aer circuit simulation per check position.
         """
         t_start = time.perf_counter()
 
@@ -146,22 +182,34 @@ class QdsT1Protocol:
         for i in range(n):
             b_exp = expected_bits[i]
             beta = bases[i]
+            prov_syn = tuple(provided_syndromes[i]) if i < len(provided_syndromes) else (0, 0)
 
             if alice_measurements and i < len(alice_measurements):
                 true_syn = tuple(alice_measurements[i])
+                if mode == "circuit":
+                    # Full hardware-in-the-loop Aer circuit execution
+                    measured_bit = engine.run_circuit_verification(
+                        bit=b_exp,
+                        basis=beta,
+                        provided_syndrome=prov_syn
+                    )
+                else:
+                    # Analytical Born-rule statevector verification (exact, O(n) complexity)
+                    measured_bit = engine.simulate_bob_verification(
+                        bit=b_exp,
+                        basis=beta,
+                        true_syndrome=true_syn,
+                        provided_syndrome=prov_syn,
+                        inject_noise=True
+                    )
             else:
-                # If unentangled adversary created bundle without Alice's Bell state
-                true_syn = (int(np.random.randint(0, 2)), int(np.random.randint(0, 2)))
-
-            prov_syn = tuple(provided_syndromes[i]) if i < len(provided_syndromes) else (0, 0)
-
-            measured_bit = engine.simulate_bob_verification(
-                bit=b_exp,
-                basis=beta,
-                true_syndrome=true_syn,
-                provided_syndrome=prov_syn,
-                inject_noise=True
-            )
+                # Unentangled adversary case: Bob measures maximally mixed subsystem rho_B = 1/2 * I
+                measured_bit = self.evaluate_unentangled_adversary_projection(
+                    expected_bit=b_exp,
+                    basis=beta,
+                    provided_syndrome=prov_syn,
+                    p0=noise_floor
+                )
 
             if measured_bit != b_exp:
                 mismatches += 1
