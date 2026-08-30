@@ -21,7 +21,7 @@
 
     <div style="display: flex; gap: 1rem; align-items: center;">
       <span id="soc-backend-badge" style="background: rgba(0, 242, 254, 0.1); color: var(--soc-accent); border: 1px solid rgba(0, 242, 254, 0.3); padding: 0.3rem 0.8rem; border-radius: 6px; font-family: var(--soc-mono); font-size: 0.8rem; font-weight: 700;">
-        BACKEND: {{ stage_state.backend.value.upper() }}
+        ENGINE: QISKIT AER (SIM)
       </span>
       <a href="/home" target="_blank" style="color: var(--soc-text-dim); text-decoration: none; font-size: 0.85rem; padding: 0.3rem 0.8rem; border: 1px solid var(--soc-panel-border); border-radius: 6px;">
         Open Customer Bank &rarr;
@@ -31,7 +31,7 @@
 
   <!-- SOC Main Grid -->
   <div class="soc-grid">
-    <!-- Left Column: Stage Gauges, Mismatch Meter & Attack Panel -->
+    <!-- Left Column: Stage Gauges, Mismatch Meter, Pauli Table & Attack Panel -->
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <!-- Stage Cards -->
       <div class="soc-panel">
@@ -57,7 +57,7 @@
               Q{{ stage_state.stage_q.value }}
             </div>
             <div id="soc-stage-q-desc" class="stage-status-desc">
-              {% if stage_state.stage_q.value == 0 %}QBER < 5% (Healthy){% else %}Elevated Link QBER{% endif %}
+              {% if stage_state.stage_q.value == 0 %}QBER &lt; 5% (Healthy){% else %}Elevated Link QBER{% endif %}
             </div>
           </div>
         </div>
@@ -108,6 +108,41 @@
         </table>
       </div>
 
+      <!-- Pauli Correction Matrix -->
+      <div class="soc-panel">
+        <div class="soc-panel-title">
+          <span>Pauli Teleportation Lookup</span>
+          <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: #a78bfa;">BELL SYNDROMES</span>
+        </div>
+        <table class="params-table" style="margin-top: 0.5rem; text-align: center;">
+          <tr style="background: rgba(255,255,255,0.05); font-weight: bold;">
+            <td>Syndrome $(m_1, m_2)$</td>
+            <td>Pauli Gate $U$</td>
+            <td>Matrix Transformation</td>
+          </tr>
+          <tr>
+            <td><code>(0, 0)</code></td>
+            <td><strong style="color: #34d399;">$I$ (Identity)</strong></td>
+            <td>$[1, 0; 0, 1]$</td>
+          </tr>
+          <tr>
+            <td><code>(0, 1)</code></td>
+            <td><strong style="color: #60a5fa;">$X$ (Bit Flip)</strong></td>
+            <td>$[0, 1; 1, 0]$</td>
+          </tr>
+          <tr>
+            <td><code>(1, 0)</code></td>
+            <td><strong style="color: #f59e0b;">$Z$ (Phase Flip)</strong></td>
+            <td>$[1, 0; 0, -1]$</td>
+          </tr>
+          <tr>
+            <td><code>(1, 1)</code></td>
+            <td><strong style="color: #f87171;">$XZ$ (Bit + Phase)</strong></td>
+            <td>$[0, -1; 1, 0]$</td>
+          </tr>
+        </table>
+      </div>
+
       <!-- Attack Shortcuts Panel -->
       <div class="soc-panel">
         <div class="soc-panel-title">
@@ -115,7 +150,7 @@
           <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: #f87171;">DEMO WEAPONS</span>
         </div>
         <p style="font-size: 0.8rem; color: var(--soc-text-dim); margin-bottom: 0.5rem;">
-          Trigger live signature attack scenarios to demonstrate immediate threshold detection and stage escalation:
+          Trigger live signature attack scenarios to demonstrate immediate threshold detection and progressive stage escalation:
         </p>
 
         <div class="attack-buttons-grid">
@@ -139,7 +174,7 @@
         <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-green);">AUTO-REFRESHING</span>
       </div>
 
-      <div style="flex: 1; overflow-y: auto; max-height: 650px;">
+      <div style="flex: 1; overflow-y: auto; max-height: 750px;">
         <table class="feed-table">
           <thead>
             <tr>

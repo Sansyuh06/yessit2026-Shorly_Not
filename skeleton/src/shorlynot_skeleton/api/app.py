@@ -42,7 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global pipeline instance
+# Global pipeline instance (single shared brain)
 pipeline = QuantumTransferPipeline()
 sim_backend = SimBackend()
 ibm_backend = IBMBackend()
@@ -59,7 +59,9 @@ class SignRequest(BaseModel):
 class VerifyRequest(BaseModel):
     bundle: SignatureBundle
     verifier_id: str = "bob"
+    claimed_signer: Optional[str] = None
     tau_preset: TauPreset = TauPreset.NORMAL
+    update_stages: bool = Field(default=True, description="Whether verification verdict updates global security stage state machine")
 
 
 class AttackTriggerRequest(BaseModel):
@@ -70,14 +72,21 @@ class AttackTriggerRequest(BaseModel):
 
 @app.get("/v1/status")
 def get_status() -> Dict[str, Any]:
-    """Get skeleton framework status, active backends, and quantum parameters."""
+    """Get skeleton framework status, active backends, quantum parameters, and honesty metadata."""
     backend_status = ibm_backend.get_status() if ibm_backend.is_available() else sim_backend.get_status()
     stage_state = pipeline.stage_machine.get_state()
     return {
         "product": "ShorlyNot Skeleton Framework",
         "version": __version__,
         "protocol": __protocol__,
-        "detection_engine": "Q-STDF (Hoeffding Statistical Bounds - No ML)",
+        "architecture": {
+            "sign_engine": "Real Qiskit Aer 3-qubit teleportation circuits on AerSimulator",
+            "verify_engine": "Statevector syndrome projection & depolarizing noise model",
+            "threat_detection": "Q-STDF (Hoeffding Statistical Bounds - No ML)",
+            "qkd_support": "BB84 protocol simulation (statistical QBER measurement)",
+            "pqc_support": "AES-256-GCM authenticated encryption (ML-KEM reference interface)",
+            "ibm_backend": "Sim-first MVP fallback / IBM Quantum probe"
+        },
         "backend": backend_status,
         "current_stages": {
             "stage_s": stage_state.stage_s.value,
@@ -110,7 +119,7 @@ def create_qkd_session() -> Dict[str, Any]:
 
 @app.post("/v1/sign", response_model=SignatureBundle)
 def sign_payload(req: SignRequest) -> SignatureBundle:
-    """Generate a ShorlyNot-QDS-T1 signature bundle."""
+    """Generate a ShorlyNot-QDS-T1 signature bundle using real Qiskit Aer teleportation circuits."""
     bundle = pipeline.qds.sign(
         payload_hash=req.payload_hash,
         key_id=req.key_id,
@@ -121,16 +130,44 @@ def sign_payload(req: SignRequest) -> SignatureBundle:
     return bundle
 
 
-@app.post("/v1/verify", response_model=VerifyResult)
-def verify_signature(req: VerifyRequest) -> VerifyResult:
-    """Verify a ShorlyNot-QDS-T1 signature bundle."""
+@app.post("/v1/verify")
+def verify_signature(req: VerifyRequest) -> Dict[str, Any]:
+    """
+    Verify a ShorlyNot-QDS-T1 signature bundle.
+    Evaluates projective verification and runs Q-STDF deterministic classification.
+    """
     delta = TauCalculator.PRESETS[req.tau_preset]["delta"]
-    result = pipeline.qds.verify(
+    v_res = pipeline.qds.verify(
         bundle=req.bundle,
         verifier_id=req.verifier_id,
         delta=delta
     )
-    return result
+
+    # Classify threat
+    classification = pipeline.classifier.classify(
+        bundle=req.bundle,
+        verify_result=v_res,
+        claimed_signer=req.claimed_signer,
+        verifier_id=req.verifier_id
+    )
+
+    # Update stages if requested
+    stage_s = pipeline.stage_machine.stage_s
+    if req.update_stages:
+        stage_s = pipeline.stage_machine.process_threat_verdict(
+            label=classification.label,
+            mismatch_rate=v_res.mismatch_rate,
+            tau=v_res.tau,
+            actor=req.claimed_signer or "external_client",
+            details=f"Direct /v1/verify submission: {classification.reason}"
+        )
+
+    return {
+        "verify_result": v_res.model_dump(),
+        "threat_classification": classification.model_dump(),
+        "stage_s": stage_s.value,
+        "candidate_accepted": v_res.candidate_accepted and classification.passed
+    }
 
 
 @app.post("/v1/pipeline/transfer", response_model=PipelineResult)

@@ -1,0 +1,37 @@
+name: ShorlyNot CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -e skeleton
+
+      - name: Run full Pytest suite (Circuits, Attacks, Threat Ladder, Bank, E2E Fit)
+        run: |
+          python -m pytest -v --tb=short
+
+      - name: Smoke check PDF generation
+        run: |
+          python scripts/generate_pdf.py

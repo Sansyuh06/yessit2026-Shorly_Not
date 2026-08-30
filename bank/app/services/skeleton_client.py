@@ -1,9 +1,11 @@
 """
 Skeleton Framework Client for Bank Application.
-Communicates via HTTP to the Skeleton API (:8000) with fallback to local SDK instance.
+Communicates via HTTP to the Skeleton API (:8000) or uses the shared API singleton.
 Hard rule from PRD: Bank never reimplements QDS/QKD/PQC/detect logic.
+Eliminates dual-brain desync by binding to the single source of truth.
 """
 
+import os
 import httpx
 from typing import Dict, Any, Optional, List
 from shorlynot_skeleton.models import (
@@ -13,60 +15,88 @@ from shorlynot_skeleton.models import (
     StageEvent,
     MetricSummary
 )
-from shorlynot_skeleton.pipeline import QuantumTransferPipeline
 
 
 class SkeletonServiceClient:
     """
-    Client connecting Bank to the ShorlyNot Skeleton microservice.
+    Client connecting Bank to the ShorlyNot Skeleton service.
+    Guarantees consistent state across Bank UI, SOC Dashboard, and Skeleton Engine.
     """
 
-    def __init__(self, base_url: str = "http://127.0.0.1:8000"):
-        self.base_url = base_url
-        self._local_pipeline = QuantumTransferPipeline()
+    def __init__(self, base_url: Optional[str] = None):
+        # Default to environment variable or standard port 8000
+        self.base_url = base_url or os.environ.get("SHORLYNOT_API_URL", "http://127.0.0.1:8000")
+        self._shared_singleton = None
+
+    @property
+    def shared_pipeline(self):
+        """Lazy-import the API singleton if running in unified in-process mode."""
+        if self._shared_singleton is None:
+            from shorlynot_skeleton.api.app import pipeline
+            self._shared_singleton = pipeline
+        return self._shared_singleton
+
+    def _is_api_available(self) -> bool:
+        try:
+            with httpx.Client(base_url=self.base_url, timeout=0.8) as client:
+                resp = client.get("/v1/status")
+                return resp.status_code == 200
+        except Exception:
+            return False
 
     def execute_transfer(self, req: TransferPipelineRequest) -> PipelineResult:
         try:
-            with httpx.Client(base_url=self.base_url, timeout=3.0) as client:
+            with httpx.Client(base_url=self.base_url, timeout=5.0) as client:
                 resp = client.post("/v1/pipeline/transfer", json=req.model_dump())
                 if resp.status_code in (200, 403, 423):
                     return PipelineResult(**resp.json())
-        except Exception:
+        except (httpx.ConnectError, httpx.TimeoutException):
             pass
-        # Graceful fallback to embedded framework pipeline
-        return self._local_pipeline.execute_transfer(req)
+        except Exception as e:
+            raise RuntimeError(f"Skeleton API communication error: {e}") from e
+
+        # Fallback ONLY to the shared API singleton (single shared process in tests/monolith)
+        return self.shared_pipeline.execute_transfer(req)
 
     def get_stages(self) -> StageState:
         try:
-            with httpx.Client(base_url=self.base_url, timeout=2.0) as client:
+            with httpx.Client(base_url=self.base_url, timeout=1.5) as client:
                 resp = client.get("/v1/stages")
                 if resp.status_code == 200:
                     return StageState(**resp.json())
-        except Exception:
+        except (httpx.ConnectError, httpx.TimeoutException):
             pass
-        return self._local_pipeline.stage_machine.get_state()
+        except Exception as e:
+            raise RuntimeError(f"Skeleton API communication error: {e}") from e
+
+        return self.shared_pipeline.stage_machine.get_state()
 
     def get_events(self, limit: int = 50) -> List[StageEvent]:
         try:
-            with httpx.Client(base_url=self.base_url, timeout=2.0) as client:
+            with httpx.Client(base_url=self.base_url, timeout=1.5) as client:
                 resp = client.get(f"/v1/stages/events?limit={limit}")
                 if resp.status_code == 200:
                     return [StageEvent(**e) for e in resp.json()]
-        except Exception:
+        except (httpx.ConnectError, httpx.TimeoutException):
             pass
-        return self._local_pipeline.stage_machine.get_events(limit=limit)
+        except Exception as e:
+            raise RuntimeError(f"Skeleton API communication error: {e}") from e
+
+        return self.shared_pipeline.stage_machine.get_events(limit=limit)
 
     def trigger_attack(self, attack_type: str, user: str = "alice", amount: float = 1000.0) -> PipelineResult:
         try:
-            with httpx.Client(base_url=self.base_url, timeout=3.0) as client:
+            with httpx.Client(base_url=self.base_url, timeout=5.0) as client:
                 resp = client.post(
                     f"/v1/attacks/{attack_type}",
                     json={"attack_type": attack_type, "target_user": user, "amount": amount}
                 )
                 if resp.status_code in (200, 403, 423):
                     return PipelineResult(**resp.json())
-        except Exception:
+        except (httpx.ConnectError, httpx.TimeoutException):
             pass
+        except Exception as e:
+            raise RuntimeError(f"Skeleton API communication error: {e}") from e
 
         import uuid
         from shorlynot_skeleton.models import TransactionPayload, TauPreset
@@ -84,7 +114,7 @@ class SkeletonServiceClient:
             tau_preset=TauPreset.NORMAL,
             simulate_attack=attack_type
         )
-        return self._local_pipeline.execute_transfer(pipe_req)
+        return self.shared_pipeline.execute_transfer(pipe_req)
 
     def reset_stages(self) -> Dict[str, Any]:
         try:
@@ -92,11 +122,14 @@ class SkeletonServiceClient:
                 resp = client.post("/v1/stages/reset")
                 if resp.status_code == 200:
                     return resp.json()
-        except Exception:
+        except (httpx.ConnectError, httpx.TimeoutException):
             pass
-        self._local_pipeline.stage_machine.reset()
-        self._local_pipeline.classifier.clear_replay_cache()
-        return {"status": "success", "message": "Stages reset locally."}
+        except Exception as e:
+            raise RuntimeError(f"Skeleton API communication error: {e}") from e
+
+        self.shared_pipeline.stage_machine.reset()
+        self.shared_pipeline.classifier.clear_replay_cache()
+        return {"status": "success", "message": "Stages reset on shared pipeline singleton."}
 
     def get_metrics(self) -> MetricSummary:
         try:
@@ -104,8 +137,11 @@ class SkeletonServiceClient:
                 resp = client.get("/v1/metrics")
                 if resp.status_code == 200:
                     return MetricSummary(**resp.json())
-        except Exception:
+        except (httpx.ConnectError, httpx.TimeoutException):
             pass
+        except Exception as e:
+            raise RuntimeError(f"Skeleton API communication error: {e}") from e
+
         from shorlynot_skeleton.detect.tau import TauCalculator
         return MetricSummary(
             protocol="ShorlyNot-QDS-T1",

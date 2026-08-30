@@ -2,6 +2,7 @@
 Security Stage State Machine for ShorlyNot.
 S-Stages (Signature threat driving bank lock) & Q-Stages (QKD link QBER).
 Normative specification from PRD §4.4 and §8.4.
+Includes progressive escalation (repeated forgeries escalate S2 -> S3 -> S4).
 """
 
 import collections
@@ -24,6 +25,7 @@ from shorlynot_skeleton.detect.tau import TauCalculator
 class StageStateMachine:
     """
     Manages security stage escalation and event logging for SOC and Bank enforcement.
+    Features progressive escalation: repeated attacks elevate severity all the way to S4 lockdown.
     """
 
     def __init__(self, event_history_limit: int = 200):
@@ -35,6 +37,7 @@ class StageStateMachine:
         self.backend: QuantumBackend = QuantumBackend.SIM
         self.event_limit = event_history_limit
         self.events: collections.deque = collections.deque(maxlen=event_history_limit)
+        self.consecutive_threats: int = 0
 
     def get_state(self) -> StageState:
         tau = TauCalculator.get_preset_tau(self.preset)
@@ -93,7 +96,10 @@ class StageStateMachine:
         details: str = ""
     ) -> StageS:
         """
-        Escalate S-stage based on threat label.
+        Escalate S-stage based on threat label and progressive attack history.
+        - Single Forgery/Impersonation: S2 (transfers suspended)
+        - Repeated Attack under S2: Escalates to S3 (read-only) -> S4 (full lockdown)
+        - Channel tampering / Severe QBER: S4 immediately
         """
         self.last_threat = label
         self.last_mismatch = mismatch_rate
@@ -101,20 +107,31 @@ class StageStateMachine:
         new_stage = self.stage_s
 
         if label == ThreatLabel.OK:
-            # If healthy and current stage is S1, restore S0. If higher, requires explicit reset or decay
+            self.consecutive_threats = 0
             if self.stage_s == StageS.S1:
                 new_stage = StageS.S0
-        elif label in (ThreatLabel.FORGERY, ThreatLabel.IMPERSONATION):
-            # Escalate to at least S2 (block transfers)
-            if self.stage_s.value < StageS.S2.value:
-                new_stage = StageS.S2
-        elif label in (ThreatLabel.REPLAY, ThreatLabel.UNAUTH_VERIFY):
-            # Escalate to at least S3 (read-only)
-            if self.stage_s.value < StageS.S3.value:
-                new_stage = StageS.S3
-        elif label == ThreatLabel.CHANNEL:
-            # Escalate to S4 (full lockdown)
-            new_stage = StageS.S4
+        else:
+            self.consecutive_threats += 1
+
+            if label == ThreatLabel.CHANNEL:
+                # Critical channel compromise -> immediate full bank lockdown
+                new_stage = StageS.S4
+            elif label in (ThreatLabel.REPLAY, ThreatLabel.UNAUTH_VERIFY):
+                # Pattern attack / unauthorized entity
+                if self.stage_s.value < StageS.S3.value:
+                    new_stage = StageS.S3
+                elif self.consecutive_threats >= 2:
+                    new_stage = StageS.S4
+            elif label in (ThreatLabel.FORGERY, ThreatLabel.IMPERSONATION):
+                # Initial signature violation -> S2
+                if self.stage_s.value < StageS.S2.value:
+                    new_stage = StageS.S2
+                elif self.stage_s == StageS.S2:
+                    # Repeated forgery attack while already under S2 alert -> escalate to S3
+                    new_stage = StageS.S3
+                elif self.stage_s == StageS.S3 or self.consecutive_threats >= 3:
+                    # Persistent attack wave -> escalate to S4 lockdown
+                    new_stage = StageS.S4
 
         self.stage_s = new_stage
 
@@ -142,6 +159,7 @@ class StageStateMachine:
         self.stage_q = StageQ.Q0
         self.last_threat = ThreatLabel.OK
         self.last_mismatch = 0.0
+        self.consecutive_threats = 0
 
         event = StageEvent(
             id=str(uuid.uuid4())[:8],
