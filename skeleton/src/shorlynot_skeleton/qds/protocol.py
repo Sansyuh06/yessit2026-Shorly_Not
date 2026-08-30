@@ -2,6 +2,8 @@
 ShorlyNot-QDS-T1 Protocol Implementation.
 Teleportation Profile T1 (MVP) for SIH 2026 PS 26141.
 Normative specification from PRD §3 and MODEL.md.
+
+ALL Bell measurements come from real Qiskit Aer circuits.
 """
 
 import time
@@ -19,6 +21,9 @@ class QdsT1Protocol:
     ShorlyNot-QDS-T1 Protocol Manager.
     Performs quantum digital signature generation and verification using Bell-state teleportation
     and Pauli eigenstate projective measurements.
+
+    Sign path: runs N real teleportation circuits on AerSimulator to get Bell syndromes.
+    Verify path: uses statevector math to check if provided syndromes recover original state.
     """
 
     def __init__(self, p0: float = 0.02, default_delta: float = 0.01):
@@ -38,12 +43,13 @@ class QdsT1Protocol:
     ) -> SignatureBundle:
         """
         Sign a payload hash using ShorlyNot-QDS-T1 teleportation-based protocol.
+        Each check position runs a REAL Qiskit Aer teleportation circuit.
         """
         t_start = time.perf_counter()
-        
+
         # 1. Derive payload bits
         bits = PauliEncoding.derive_payload_bits(payload_hash, length=L)
-        
+
         # 2. Select bases for all L positions (0 = Z basis, 1 = X basis)
         if bases is None:
             bases = [int(np.random.randint(0, 2)) for _ in range(L)]
@@ -55,19 +61,39 @@ class QdsT1Protocol:
         # 3. Nonce generation
         tx_nonce = nonce or str(uuid.uuid4())
 
-        # 4. Perform Bell measurements on check positions
-        syndromes = [
-            list(self.engine.generate_bell_measurement())
-            for _ in range(n_checks)
-        ]
+        # 4. Run real teleportation circuits for each check position
+        #    Each circuit prepares |psi(bit, basis)>, creates Bell pair,
+        #    Alice does Bell measurement, Bob corrects and measures.
+        syndromes = []
+        circuit_results = []
+
+        for i in range(n_checks):
+            bit = bits[i]
+            beta = bases[i]
+
+            # Run real circuit on AerSimulator
+            result = self.engine.run_teleportation_circuit(bit, beta, shots=1)
+            syndromes.append([result["m1"], result["m2"]])
+            circuit_results.append({
+                "pos": i,
+                "bit": bit,
+                "basis": beta,
+                "m1": result["m1"],
+                "m2": result["m2"],
+                "bob_bit": result["bob_bit"]
+            })
 
         t_end = time.perf_counter()
+
         telemetry = {
             "sign_latency_ms": round((t_end - t_start) * 1000, 3),
             "check_positions": n_checks,
             "bell_pair_type": "Phi+",
             "state_preparation": "Pauli-Eigenstates",
-            "alice_bell_measurements": [list(s) for s in syndromes]
+            "circuit_backend": "qiskit_aer",
+            "real_circuits": True,
+            "alice_bell_measurements": [list(s) for s in syndromes],
+            "circuit_verification_results": circuit_results
         }
 
         bundle = SignatureBundle(
@@ -97,13 +123,15 @@ class QdsT1Protocol:
     ) -> VerifyResult:
         """
         Verify a ShorlyNot-QDS-T1 signature bundle.
+        Bob checks if the provided syndromes allow him to recover
+        the original message bits via Pauli corrections.
         """
         t_start = time.perf_counter()
-        
+
         noise_floor = p0 if p0 is not None else self.p0
         reject_budget = delta if delta is not None else self.default_delta
         n = bundle.n_checks
-        
+
         # 1. Derive expected payload bits
         expected_bits = PauliEncoding.derive_payload_bits(bundle.payload_hash, length=bundle.L)[:n]
         bases = bundle.bases[:n]
@@ -118,7 +146,7 @@ class QdsT1Protocol:
         for i in range(n):
             b_exp = expected_bits[i]
             beta = bases[i]
-            
+
             if alice_measurements and i < len(alice_measurements):
                 true_syn = tuple(alice_measurements[i])
             else:
