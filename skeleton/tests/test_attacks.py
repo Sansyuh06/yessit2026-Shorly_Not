@@ -113,3 +113,16 @@ def test_parameter_tampering_downgrade_attack_vector():
     assert classification.passed is False
     assert classification.label == ThreatLabel.CHANNEL
     assert classification.stage_s_recommendation == StageS.S4
+
+    # Also test via full pipeline execution
+    pipeline = QuantumTransferPipeline()
+    tx = TransactionPayload(from_user="alice", to_user="bob", amount=1000.0, tx_id="tx-tamper-1")
+    req = TransferPipelineRequest(
+        transaction=tx,
+        signer_key_id="alice-key-1",
+        simulate_attack="param_tamper"
+    )
+    pipeline_res = pipeline.execute_transfer(req)
+    assert pipeline_res.success is False
+    assert pipeline_res.threat_classification.label == ThreatLabel.CHANNEL
+    assert pipeline_res.stage_s >= StageS.S2

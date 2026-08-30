@@ -130,6 +130,13 @@ class QuantumTransferPipeline:
             bundle = ChannelTamperingAttack.tamper_correction_bits(bundle)
             bundle = ChannelTamperingAttack.corrupt_pqc_ciphertext(bundle)
             channel_tampered = True
+        elif request.simulate_attack in ("param_tamper", "param_downgrade"):
+            from shorlynot_skeleton.attacks.param_tamper import ParameterTamperingAttack
+            bundle = ParameterTamperingAttack.generate_downgraded_bundle(
+                payload_hash=payload_hash,
+                claimed_key_id=signer_key,
+                tampered_n=1
+            )
 
         # Step 4: PQC Unwrap & Verification
         if bundle.protected_corrections:
