@@ -16,6 +16,10 @@ from shorlynot_skeleton.qds.encoding import PauliEncoding
 from shorlynot_skeleton.engines.qiskit_aer import QiskitAerEngine
 
 
+MIN_SECURE_N: int = 32
+DEFAULT_VERIFIER_N: int = 64
+
+
 class QdsT1Protocol:
     """
     ShorlyNot-QDS-T1 Protocol Manager.
@@ -47,27 +51,28 @@ class QdsT1Protocol:
         """
         t_start = time.perf_counter()
 
+        effective_n = n_checks
+        effective_L = max(L, effective_n)
+
         # 1. Derive payload bits
-        bits = PauliEncoding.derive_payload_bits(payload_hash, length=L)
+        bits = PauliEncoding.derive_payload_bits(payload_hash, length=effective_L)
 
         # 2. Select bases for all L positions (0 = Z basis, 1 = X basis)
         if bases is None:
-            bases = [int(np.random.randint(0, 2)) for _ in range(L)]
+            bases = [int(np.random.randint(0, 2)) for _ in range(effective_L)]
         else:
-            if len(bases) < L:
-                bases = bases + [int(np.random.randint(0, 2)) for _ in range(L - len(bases))]
-            bases = bases[:L]
+            if len(bases) < effective_L:
+                bases = bases + [int(np.random.randint(0, 2)) for _ in range(effective_L - len(bases))]
+            bases = bases[:effective_L]
 
         # 3. Nonce generation
         tx_nonce = nonce or str(uuid.uuid4())
 
         # 4. Run real teleportation circuits for each check position
-        #    Each circuit prepares |psi(bit, basis)>, creates Bell pair,
-        #    Alice does Bell measurement, Bob corrects and measures.
         syndromes = []
         circuit_results = []
 
-        for i in range(n_checks):
+        for i in range(effective_n):
             bit = bits[i]
             beta = bases[i]
 
@@ -87,7 +92,7 @@ class QdsT1Protocol:
 
         telemetry = {
             "sign_latency_ms": round((t_end - t_start) * 1000, 3),
-            "check_positions": n_checks,
+            "check_positions": effective_n,
             "bell_pair_type": "Phi+",
             "state_preparation": "Pauli-Eigenstates",
             "circuit_backend": "qiskit_aer",
@@ -107,8 +112,8 @@ class QdsT1Protocol:
             backend=backend,
             engine=QuantumEngine.QISKIT,
             pqc_mode="aes-gcm-demo",
-            n_checks=n_checks,
-            L=L
+            n_checks=effective_n,
+            L=effective_L
         )
 
         return bundle
@@ -123,22 +128,7 @@ class QdsT1Protocol:
         """
         Evaluate Bob's measurement outcome when an unentangled adversary (Eve)
         fabricates a signature bundle without access to Alice's entangled Bell state.
-
-        Quantum Information Theory Model:
-        In teleportation QDS, Alice and Bob share Bell states |Phi+>_AB.
-        When Alice measures (q_A, epr_A), Bob's qubit is steered into U^dag |psi>.
-        Without Alice's entangled measurement, Bob's reduced subsystem state is
-        the maximally mixed density matrix:
-            rho_B = Tr_A(|Phi+><Phi+|) = 1/2 * I = [[0.5, 0], [0, 0.5]]
-        
-        Because rho_B commutes with all single-qubit unitaries U(m1, m2) (since U (1/2 I) U^dag = 1/2 I),
-        projective measurement in any basis (Z or X) produces:
-            Pr(b' = 0) = Pr(b' = 1) = 0.50
-        
-        This yields an expected mismatch rate E[p_hat] = 0.50, ensuring deterministic
-        forgery detection well above the Hoeffding threshold tau (~0.21).
         """
-        # Maximally mixed state measurement probabilities under depolarizing channel
         prob_0 = 0.50
         prob_1 = 0.50
         return int(np.random.choice([0, 1], p=[prob_0, prob_1]))
@@ -150,22 +140,59 @@ class QdsT1Protocol:
         delta: Optional[float] = None,
         p0: Optional[float] = None,
         override_syndromes: Optional[List[List[int]]] = None,
-        mode: str = "analytic"  # "analytic" (O(n) Born-rule for edge nodes) | "circuit" (Aer circuits)
+        mode: str = "analytic",
+        min_required_n: int = MIN_SECURE_N
     ) -> VerifyResult:
         """
         Verify a ShorlyNot-QDS-T1 signature bundle.
         Bob checks if the provided syndromes allow him to recover
         the original message bits via Pauli corrections.
 
-        Verification Modes:
-        - 'analytic' (Default): O(n) Born-rule evaluation. Exact analytical expectation,
-          sub-millisecond latency for edge routers/gateways (PS 26141 efficiency requirement).
-        - 'circuit': Full 3-qubit Qiskit Aer circuit simulation per check position.
+        Security Hardening:
+        - Rejects security parameter downgrade attacks (n_checks < MIN_SECURE_N).
+        - Validates submitted basis and syndrome array lengths against claimed n_checks.
         """
         t_start = time.perf_counter()
 
         noise_floor = p0 if p0 is not None else self.p0
         reject_budget = delta if delta is not None else self.default_delta
+        
+        # -------------------------------------------------------------
+        # Security Parameter Integrity & Downgrade Prevention
+        # -------------------------------------------------------------
+        if bundle.n_checks < min_required_n:
+            t_end = time.perf_counter()
+            # Standard reference tau for rejected parameter tampering
+            tau_ref = noise_floor + np.sqrt(np.log(1.0 / reject_budget) / (2.0 * min_required_n))
+            return VerifyResult(
+                candidate_accepted=False,
+                mismatch_rate=1.0,
+                mismatches=bundle.n_checks,
+                n_checks=bundle.n_checks,
+                tau=round(float(tau_ref), 4),
+                p0=noise_floor,
+                delta=reject_budget,
+                profile=bundle.profile,
+                backend=bundle.backend.value,
+                verification_time_ms=round((t_end - t_start) * 1000, 3)
+            )
+
+        if len(bundle.bases) < bundle.n_checks or len(bundle.correction_bits) < bundle.n_checks:
+            t_end = time.perf_counter()
+            tau_ref = noise_floor + np.sqrt(np.log(1.0 / reject_budget) / (2.0 * bundle.n_checks))
+            return VerifyResult(
+                candidate_accepted=False,
+                mismatch_rate=1.0,
+                mismatches=bundle.n_checks,
+                n_checks=bundle.n_checks,
+                tau=round(float(tau_ref), 4),
+                p0=noise_floor,
+                delta=reject_budget,
+                profile=bundle.profile,
+                backend=bundle.backend.value,
+                verification_time_ms=round((t_end - t_start) * 1000, 3)
+            )
+
         n = bundle.n_checks
 
         # 1. Derive expected payload bits

@@ -98,8 +98,8 @@ class QstdfClassifier:
         # -------------------------------------------------------------
         # STEP 2: IMPERSONATION (Signer Key ID Binding Check)
         # -------------------------------------------------------------
+        from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
         if claimed_signer:
-            from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
             is_valid_in_registry = GLOBAL_KEY_REGISTRY.validate_key_binding(bundle.key_id, claimed_signer)
             expected_key = self.key_bindings.get(claimed_signer)
             
@@ -115,6 +115,21 @@ class QstdfClassifier:
                     delta=delta,
                     stage_s_recommendation=StageS.S2,
                     details={"claimed_signer": claimed_signer, "provided_key": bundle.key_id, "step": 2}
+                )
+        else:
+            # Standalone verify without claimed_signer: key_id must exist in registry
+            if bundle.key_id not in self.key_bindings and not GLOBAL_KEY_REGISTRY.get_key(bundle.key_id):
+                return ThreatClassification(
+                    label=ThreatLabel.IMPERSONATION,
+                    passed=False,
+                    reason=f"Unregistered signer key_id '{bundle.key_id}' submitted without authenticated identity.",
+                    mismatch_rate=mismatch_rate,
+                    tau=tau,
+                    p0=p0,
+                    n=n,
+                    delta=delta,
+                    stage_s_recommendation=StageS.S2,
+                    details={"provided_key": bundle.key_id, "step": 2}
                 )
 
         # -------------------------------------------------------------
@@ -135,20 +150,34 @@ class QstdfClassifier:
             )
 
         # -------------------------------------------------------------
-        # STEP 4: CHANNEL (PQC Wrapper / Channel Tampering Check)
+        # STEP 4: CHANNEL & PARAMETER TAMPERING (Integrity Check)
         # -------------------------------------------------------------
+        if bundle.n_checks < 32 or len(bundle.bases) < bundle.n_checks or len(bundle.correction_bits) < bundle.n_checks:
+            return ThreatClassification(
+                label=ThreatLabel.CHANNEL,
+                passed=False,
+                reason=f"Security parameter downgrade / array length tampering detected (n_checks={bundle.n_checks} < 32).",
+                mismatch_rate=1.0,
+                tau=tau,
+                p0=p0,
+                n=n,
+                delta=delta,
+                stage_s_recommendation=StageS.S4,
+                details={"n_checks": bundle.n_checks, "step": 4, "param_tampering": True}
+            )
+
         if not pqc_unprotect_success or channel_tampered:
             return ThreatClassification(
                 label=ThreatLabel.CHANNEL,
                 passed=False,
-                reason="PQC correction bit unprotect failed or quantum channel syndrome corruption detected in transit.",
+                reason="PQC correction bits decryption failure or active quantum channel tampering detected.",
                 mismatch_rate=mismatch_rate,
                 tau=tau,
                 p0=p0,
                 n=n,
                 delta=delta,
                 stage_s_recommendation=StageS.S4,
-                details={"pqc_success": pqc_unprotect_success, "channel_tampered": channel_tampered, "step": 4}
+                details={"pqc_unprotect_success": pqc_unprotect_success, "channel_tampered": channel_tampered, "step": 4}
             )
 
         # -------------------------------------------------------------

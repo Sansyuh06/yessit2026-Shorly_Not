@@ -5,9 +5,12 @@ Supports SQLite database persistence with automatic table initialization.
 
 import os
 import sqlite3
+import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger("shorlynot.bank.ledger")
 
 
 class LedgerEntry(BaseModel):
@@ -55,8 +58,8 @@ class BankLedger:
                     )
                 """)
                 conn.commit()
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.exception("Failed to initialize SQLite bank ledger database at %s: %s", self.db_path, ex)
 
     def record_transaction(
         self,
@@ -100,8 +103,8 @@ class BankLedger:
                     entry.tau, entry.threat_label, entry.stage_s, entry.details
                 ))
                 conn.commit()
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.exception("Failed to record transaction %s into SQLite ledger: %s", tx_id, ex)
 
         return entry
 
@@ -117,7 +120,8 @@ class BankLedger:
                 """, (username, username))
                 rows = cursor.fetchall()
                 return [LedgerEntry(**dict(row)) for row in rows]
-        except Exception:
+        except Exception as ex:
+            logger.exception("Failed to fetch user history for %s from SQLite ledger: %s", username, ex)
             return []
 
     def get_all_history(self, limit: int = 100) -> List[LedgerEntry]:
@@ -132,7 +136,8 @@ class BankLedger:
                 """, (limit,))
                 rows = cursor.fetchall()
                 return [LedgerEntry(**dict(row)) for row in rows]
-        except Exception:
+        except Exception as ex:
+            logger.exception("Failed to fetch all transaction history from SQLite ledger: %s", ex)
             return []
 
     def clear(self):
@@ -141,5 +146,5 @@ class BankLedger:
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM ledger_transactions")
                 conn.commit()
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.exception("Failed to clear SQLite ledger: %s", ex)

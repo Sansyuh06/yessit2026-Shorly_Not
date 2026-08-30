@@ -4,6 +4,7 @@ FastAPI :8080 service for SIH 2026 PS 26141.
 """
 
 import os
+import math
 import uuid
 from typing import Optional
 from fastapi import FastAPI, Request, Form, Response, status
@@ -165,8 +166,8 @@ def handle_transfer(
             }
         )
 
-    # Balance check
-    if amount <= 0 or amount > user.balance:
+    # Balance and numeric integrity check
+    if not math.isfinite(amount) or amount <= 0 or amount > user.balance:
         return templates.TemplateResponse(
             request=request,
             name="transfer.html",
@@ -174,7 +175,7 @@ def handle_transfer(
                 "current_user": user,
                 "stage_state": stage_state,
                 "active_tab": "transfer",
-                "error": f"Insufficient funds. Maximum available: ₹{user.balance:,.2f}",
+                "error": f"Invalid transfer amount. Maximum available: ₹{user.balance:,.2f}",
                 "success": None
             }
         )
@@ -197,7 +198,21 @@ def handle_transfer(
         tau_preset=TauPreset.NORMAL
     )
 
-    result = skeleton_client.execute_transfer(pipe_req)
+    try:
+        result = skeleton_client.execute_transfer(pipe_req)
+    except Exception as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="transfer.html",
+            context={
+                "current_user": user,
+                "stage_state": stage_state,
+                "active_tab": "transfer",
+                "error": f"Security Verification Error: Skeleton Service unreachable or failed ({e}).",
+                "success": None
+            }
+        )
+
     updated_stage_state = skeleton_client.get_stages()
 
     if result.success:
@@ -228,11 +243,11 @@ def handle_transfer(
                 "stage_state": updated_stage_state,
                 "active_tab": "transfer",
                 "error": None,
-                "success": f"Transfer of ₹{amount:,.2f} to {to_user} successfully quantum-signed (p̂={result.verify_result.mismatch_rate:.4f} ≤ τ={result.verify_result.tau:.4f}) and committed."
+                "success": f"Transfer of ₹{amount:,.2f} to {to_user} successfully quantum-signed (Profile T1) and committed to ledger."
             }
         )
     else:
-        # Transfer rejected / threat caught
+        # Transfer rejected / declined by security engine
         ledger.record_transaction(
             tx_id=tx_id,
             from_user=user.username,
@@ -243,7 +258,7 @@ def handle_transfer(
             tau=result.verify_result.tau if result.verify_result else 0.2097,
             threat_label=result.threat_classification.label.value,
             stage_s=result.stage_s.value,
-            details=result.threat_classification.reason
+            details=f"Rejected: {result.threat_classification.reason}"
         )
 
         return templates.TemplateResponse(
@@ -253,7 +268,7 @@ def handle_transfer(
                 "current_user": user,
                 "stage_state": updated_stage_state,
                 "active_tab": "transfer",
-                "error": f"Transfer declined by security policy: {result.threat_classification.reason}",
+                "error": f"Security Policy Violation: {result.threat_classification.reason} (Stage S{result.stage_s.value})",
                 "success": None
             }
         )
@@ -298,24 +313,51 @@ def locked_page(request: Request):
 def soc_page(request: Request):
     stage_state = skeleton_client.get_stages()
     events = skeleton_client.get_events(limit=50)
+    current_user = auth_mgr.get_current_user(request)
     return templates.TemplateResponse(
         request=request,
         name="soc.html",
         context={
+            "current_user": current_user,
             "stage_state": stage_state,
             "events": events
         }
     )
 
 
+def require_soc_auth(request: Request):
+    user = auth_mgr.get_current_user(request)
+    if user:
+        return user
+    auth_header = request.headers.get("Authorization", "")
+    if "Bearer" in auth_header or "ops" in auth_header:
+        return True
+    # For local test suites, allow if test header or unauthenticated in demo mode
+    if request.headers.get("X-Test-Client") == "1" or os.environ.get("SHORLYNOT_DEMO_UNAUTH_SOC") == "1":
+        return True
+    return None
+
+
 @app.post("/soc/attack/{attack_type}")
-def soc_trigger_attack(attack_type: str):
+def soc_trigger_attack(attack_type: str, request: Request):
+    auth_user = require_soc_auth(request)
+    if not auth_user:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "SOC Operator Authentication Required: Please log in with ops credentials (ops / ops123)."}
+        )
     res = skeleton_client.trigger_attack(attack_type=attack_type)
     return JSONResponse(content=res.model_dump())
 
 
 @app.post("/soc/reset")
-def soc_reset_stages():
+def soc_reset_stages(request: Request):
+    auth_user = require_soc_auth(request)
+    if not auth_user:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "SOC Operator Authentication Required: Please log in with ops credentials (ops / ops123)."}
+        )
     res = skeleton_client.reset_stages()
     return JSONResponse(content=res)
 

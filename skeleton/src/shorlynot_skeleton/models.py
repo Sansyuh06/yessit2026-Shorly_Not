@@ -106,17 +106,28 @@ class ThreatClassification(BaseModel):
     details: Dict[str, Any] = Field(default_factory=dict)
 
 
+import math
+from pydantic import BaseModel, Field, field_validator
+
+
 class TransactionPayload(BaseModel):
     """
     Financial transaction payload for bank transfers.
     Normative schema from PRD §4.6.
     """
-    from_user: str
-    to_user: str
-    amount: float
+    from_user: str = Field(..., min_length=1, description="Sender username")
+    to_user: str = Field(..., min_length=1, description="Recipient username")
+    amount: float = Field(..., gt=0, description="Transfer amount in currency units")
     currency: str = "INR"
     tx_id: str
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    @field_validator("amount")
+    @classmethod
+    def _validate_amount_finite_positive(cls, v: float) -> float:
+        if not math.isfinite(v) or v <= 0:
+            raise ValueError("Amount must be a finite positive number")
+        return v
 
     def canonical_json(self) -> str:
         """Deterministically format JSON with sorted keys and no extra whitespace."""

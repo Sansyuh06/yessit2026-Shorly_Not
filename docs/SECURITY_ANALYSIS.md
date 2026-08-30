@@ -73,3 +73,16 @@ To maintain scientific integrity for SIH 2026 evaluation:
 - **No Novel Quantum Physics Claim**: Teleportation and Bell-basis measurements are established principles (Bennett et al. 1993, Gottesman-Chuang 2001). Our novelty is **Q-STDF**: the non-ML statistical threat detection ladder, multi-stage application state machine, and atomic banking workflow integration.
 - **No Machine Learning Claim**: Detection relies strictly on Hoeffding statistical bounds and rule ladders; no neural networks or classifiers are used for threat decisions.
 - **No OS Kernel Manipulation**: Bank lockdown is enforced purely at the application layer ($S_0 \to S_4$), avoiding brittle `iptables` or root OS privileges.
+
+---
+
+## 5. Known Limitations & Architectural Scope
+
+1. **Two-Party MVP (Alice Signer, Bob Verifier)**:
+   - Designed for point-to-point payment authorization. Multi-receiver transferable non-repudiation (requiring arbitrated Trent or optical multiports) is formally reserved for future profile T2-AQS.
+2. **Global Gateway Threat Escalation**:
+   - The Stage State Machine ($S_0 \to S_4$) acts as a central financial gateway firewall. When high-severity attacks occur (e.g. channel compromise or repeated forgery), the system escalates the global operational posture to protect customer balances.
+3. **Strict Verifier-Owned Security Parameters**:
+   - The verifier enforces a strict security floor $\text{MIN\_SECURE\_N} = 32$. Any attempt by an adversary to submit downgraded check lengths ($n_{\text{checks}} < 32$) is immediately intercepted and rejected as a parameter tampering attack.
+4. **Demonstration Authentication & Session Scope**:
+   - Mock bank accounts use pre-seeded test credentials in RAM to allow repeatable demo execution, while all verified transaction logs are persisted to SQLite. Production deployments would swap this for OAuth2 / HSM-backed authentication.

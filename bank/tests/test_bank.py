@@ -70,12 +70,38 @@ def test_bank_transfers_blocked_when_attack_escalates_stage():
 
 def test_soc_reset_restores_operations():
     client = TestClient(app)
+    login_resp = client.post("/login", data={"username": "ops", "password": "ops123"}, follow_redirects=False)
+    token = login_resp.cookies["session_token"]
+    client.cookies.set("session_token", token)
     
     # 1. Trigger channel attack -> escalates to S4
-    client.post("/soc/attack/channel")
+    atk_resp = client.post("/soc/attack/channel")
+    assert atk_resp.status_code == 200
     assert skeleton_client.get_stages().stage_s.value >= 2
 
     # 2. Reset security stages via SOC
     reset_resp = client.post("/soc/reset")
     assert reset_resp.status_code == 200
     assert skeleton_client.get_stages().stage_s.value == 0
+
+
+def test_soc_unauthenticated_write_rejected():
+    client = TestClient(app)
+    # Anonymous unauthenticated client attempting SOC modification
+    atk_resp = client.post("/soc/attack/channel")
+    assert atk_resp.status_code == 401
+    assert "Authentication Required" in atk_resp.text
+
+
+def test_bank_nan_amount_rejected():
+    client = TestClient(app)
+    login_resp = client.post("/login", data={"username": "alice", "password": "alice123"}, follow_redirects=False)
+    token = login_resp.cookies["session_token"]
+    client.cookies.set("session_token", token)
+
+    # Attempting to post NaN or invalid non-finite amount must not crash with 500
+    tx_resp = client.post("/transfer", data={"to_user": "bob", "amount": "nan"})
+    assert tx_resp.status_code in (200, 422)  # Either clean form error or schema validation
+    if tx_resp.status_code == 200:
+        assert "Invalid" in tx_resp.text or "Insufficient" in tx_resp.text
+    assert auth_mgr.users["alice"].balance == 50000.0
