@@ -1,0 +1,1 @@
+app = "ShorlyNot Secure Chat"

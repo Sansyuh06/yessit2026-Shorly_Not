@@ -1,0 +1,11 @@
+project:
+  name: "FinQuantum Shield"
+  version: "1.0.0"
+  tagline: "Quantum-safe communication, secured by physics - not math."
+quantum:
+  qber_threshold: 0.11
+network:
+  escalation:
+    ports: [1919, 1920]
+ui:
+  theme: "dark"
