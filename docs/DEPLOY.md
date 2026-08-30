@@ -63,20 +63,30 @@ python -m app.main
 
 1. **Baseline Operations**:
    - Open `http://127.0.0.1:8080/soc` in one window. Observe **Stage S0**, **SIM Backend**, **Zero Threat Rate**.
-   - Open `http://127.0.0.1:8080` in another window. Log in as `alice`.
+   - Open `http://127.0.0.1:8080` in another window. Log in as `alice` (`alice123`).
    - Transfer ₹1,000 to `bob`.
-   - **Result**: Transfer succeeds. SOC logs `OK`, empirical mismatch $\hat{p} < \tau$ (e.g. $\hat{p} = 0.015 \le 0.210$).
-2. **Execute Forgery Attack**:
-   - On the SOC console or using the attack panel, trigger `Simulate Signature Forgery`.
-   - **Result**: Quantum projective verification yields high mismatch ($\hat{p} \approx 0.50 > 0.210$). Q-STDF flags `FORGERY` in bold red.
+   - **Result**: Transfer succeeds. SOC logs `OK`, empirical mismatch $\hat{p} < \tau$ (e.g. $\hat{p} = 0.015 \le 0.2097$).
+2. **Execute Forgery Attack (Escalate to Stage S2)**:
+   - On the SOC console, click **FORGERY**.
+   - **Result**: Quantum projective verification yields high mismatch ($\hat{p} \approx 0.50 > 0.2097$). Q-STDF flags `FORGERY` in bold red.
    - Stage escalates to **Stage S2 (Transfers Suspended)**.
-3. **Show Bank Application Lockdown**:
+3. **Show Bank Application Enforcement**:
    - Switch to Alice's bank tab and attempt another transfer of ₹2,500.
-   - **Result**: Bank blocks the transfer instantly with *“New transfers suspended (security stage S2)”*.
-4. **Execute Replay Attack**:
-   - Trigger `Simulate Nonce Replay Attack`.
-   - **Result**: Nonce duplication detected instantly by Q-STDF binding layer $\rightarrow$ Stage escalates to **Stage S3 / S4**.
-   - Bank enters full lockdown.
-5. **Review Metrics & Reset**:
-   - Show Hoeffding $\tau$ parameters ($p_0=0.02, n=64, \delta=0.01, \tau=0.210$), $P_{\text{forge}} < 10^{-5}$, and sub-millisecond classification latency.
-   - Click **Reset Security Stage** to restore operational readiness.
+   - **Result**: Bank blocks the transfer instantly with *“New transfers suspended by security policy (Stage S2)”*.
+4. **Escalate to Full Bank Lockdown (Stage S4)**:
+   - On the SOC console, click **FORGERY** two more times, or click **CHANNEL** once.
+   - **Result**: Repeated critical violations or channel disruption triggers **Stage S4 (Full Bank Lockdown)**.
+   - Alice is redirected to the `/locked` page: *“Bank Services Suspended by Security Operations”*.
+5. **Review Metrics & Ops Reset**:
+   - Point out the **Information-Theoretic Security Card** on the SOC:
+     - Hoeffding parameters: $p_0=0.02, n=64, \delta=0.01 \implies \tau=0.2097$.
+     - Theoretical bound: $P_{\text{forge}} = 9.40 \times 10^{-7}$.
+     - Sub-millisecond verification latency ($< 1$ ms).
+   - Click **RESET SECURITY STAGES (S0, Q0)** on the SOC console to restore normal bank operations.
+
+---
+
+## State Persistence Note
+
+- **Transactions**: Every transfer attempt and its quantum telemetry is persisted to the local SQLite database (`bank_ledger.db`).
+- **Account Balances**: Seed balances (Alice: ₹50,000, Bob: ₹20,000, Carol: ₹10,000, Eve: ₹1,000) initialize in RAM on service boot to facilitate clean, repeatable demo resets.
