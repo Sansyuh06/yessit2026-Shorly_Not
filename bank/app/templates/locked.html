@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Application Locked · ShorlyNot Bank{% endblock %}
+
+{% block content %}
+<div style="max-width: 550px; margin: 4rem auto; text-align: center;">
+  <div class="card" style="border-top: 4px solid var(--danger);">
+    <div style="font-size: 3.5rem; margin-bottom: 1rem;">🔒</div>
+    <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--danger); margin-bottom: 0.5rem;">
+      Bank Application Locked
+    </h2>
+    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+      The banking system has entered <strong>Stage S4 (Critical Security Lockdown)</strong> due to severe signature manipulation, channel disruption, or active threshold violations.
+    </p>
+
+    <div style="background: var(--danger-bg); border: 1px solid #fecaca; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; font-size: 0.875rem; text-align: left; color: #991b1b;">
+      <strong>Action Required:</strong>
+      <ul style="margin-left: 1.25rem; margin-top: 0.5rem;">
+        <li>All customer transactions are strictly halted.</li>
+        <li>Ledger mutations have been frozen.</li>
+        <li>Security Operations Center (SOC) must investigate and issue an administrative reset.</li>
+      </ul>
+    </div>
+
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+      <a href="/soc" target="_blank" class="btn btn-danger" style="padding: 0.75rem 1.5rem;">
+        Open SOC Threat Console
+      </a>
+      <a href="/login" class="btn btn-secondary">
+        Return to Login
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

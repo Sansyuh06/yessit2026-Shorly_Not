@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · ShorlyNot Bank{% endblock %}
+
+{% block content %}
+<!-- Balance Hero Card -->
+<div class="balance-card">
+  <div>
+    <span style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">
+      Total Available Balance (INR)
+    </span>
+    <div class="balance-amount">₹{{ "{:,.2f}".format(current_user.balance) }}</div>
+    <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; font-size: 0.85rem; opacity: 0.9;">
+      <span>Account Holder: <strong>{{ current_user.username.capitalize() }}</strong></span>
+      <span>•</span>
+      <span>Key Binding: <code>{{ current_user.key_id }}</code></span>
+    </div>
+  </div>
+
+  <div class="balance-actions">
+    {% if stage_state.stage_s.value < 2 %}
+      <a href="/transfer" class="btn btn-primary" style="background: white; color: var(--primary); font-weight: 700;">
+        💸 Send Quantum Transfer
+      </a>
+    {% else %}
+      <button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">
+        ⛔ Transfers Suspended
+      </button>
+    {% endif %}
+    <a href="/history" class="btn btn-secondary" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);">
+      📋 Ledger Audit
+    </a>
+  </div>
+</div>
+
+<!-- Security Architecture Snapshot -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+  <div class="card" style="margin-bottom: 0;">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Quantum Signature Layer</div>
+    <div style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0.4rem 0;">ShorlyNot-QDS-T1</div>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">
+      Bell pair teleportation & Pauli eigenstate verification ($I, X, Z, XZ$).
+    </p>
+  </div>
+
+  <div class="card" style="margin-bottom: 0;">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Threat Detection Framework</div>
+    <div style="font-size: 1.25rem; font-weight: 800; color: var(--success); margin: 0.4rem 0;">Q-STDF (Non-ML)</div>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">
+      Hoeffding inequality $\tau = 0.2097$ with zero black-box AI dependencies.
+    </p>
+  </div>
+
+  <div class="card" style="margin-bottom: 0;">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Security Enforcement Stage</div>
+    <div style="font-size: 1.25rem; font-weight: 800; color: {% if stage_state.stage_s.value == 0 %}var(--success){% elif stage_state.stage_s.value == 1 %}var(--warning){% else %}var(--danger){% endif %}; margin: 0.4rem 0;">
+      Stage S{{ stage_state.stage_s.value }}
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">
+      {% if stage_state.stage_s.value < 2 %}Operational: Full banking services authorized.{% else %}Security Lock: Transfers suspended.{% endif %}
+    </p>
+  </div>
+</div>
+
+<!-- Recent Transactions Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Recent Quantum-Signed Ledger Transactions</h3>
+    <a href="/history" style="font-size: 0.875rem; color: var(--primary); font-weight: 600; text-decoration: none;">View All &rarr;</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Tx ID</th>
+          <th>Recipient</th>
+          <th>Amount</th>
+          <th>Mismatch ($\hat{p}$)</th>
+          <th>Threshold ($\tau$)</th>
+          <th>Threat Verdict</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if recent_transactions %}
+          {% for tx in recent_transactions %}
+            <tr>
+              <td><code>{{ tx.tx_id[:10] }}...</code></td>
+              <td><strong>{{ tx.to_user }}</strong></td>
+              <td>₹{{ "{:,.2f}".format(tx.amount) }}</td>
+              <td><code>{{ tx.mismatch_rate }}</code></td>
+              <td><code>{{ tx.tau }}</code></td>
+              <td>
+                <span class="badge {% if tx.threat_label == 'OK' %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ tx.threat_label }}
+                </span>
+              </td>
+              <td>
+                <span class="badge {% if tx.status == 'COMMITTED' %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ tx.status }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No transactions recorded yet. Send your first quantum-signed transfer!
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

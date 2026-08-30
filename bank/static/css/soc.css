@@ -1,0 +1,315 @@
+/* ShorlyNot SOC - Dark Cybersecurity Monitoring Dashboard */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --soc-bg: #070b13;
+  --soc-panel: #0d1527;
+  --soc-panel-border: #1e293b;
+  --soc-accent: #00f2fe;
+  --soc-accent-glow: rgba(0, 242, 254, 0.25);
+  --soc-green: #10b981;
+  --soc-green-glow: rgba(16, 185, 129, 0.3);
+  --soc-yellow: #f59e0b;
+  --soc-red: #ef4444;
+  --soc-red-glow: rgba(239, 68, 68, 0.4);
+  --soc-text: #f1f5f9;
+  --soc-text-dim: #94a3b8;
+  --soc-mono: 'JetBrains Mono', monospace;
+}
+
+body.soc-body {
+  background-color: var(--soc-bg);
+  color: var(--soc-text);
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.soc-header {
+  background: rgba(13, 21, 39, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--soc-panel-border);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.soc-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.soc-logo {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.soc-pulse-indicator {
+  width: 10px;
+  height: 10px;
+  background-color: var(--soc-green);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--soc-green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.soc-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1.8fr;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  flex: 1;
+}
+
+.soc-panel {
+  background: var(--soc-panel);
+  border: 1px solid var(--soc-panel-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.soc-panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--soc-text-dim);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--soc-panel-border);
+  padding-bottom: 0.75rem;
+}
+
+/* Stage Gauges */
+.stage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stage-card {
+  background: #090e1a;
+  border: 1px solid var(--soc-panel-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.stage-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--soc-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stage-value {
+  font-size: 2.25rem;
+  font-weight: 800;
+  font-family: var(--soc-mono);
+  margin: 0.35rem 0;
+}
+
+.stage-s0 { color: var(--soc-green); text-shadow: 0 0 15px var(--soc-green-glow); }
+.stage-s1 { color: var(--soc-yellow); }
+.stage-s2 { color: #f97316; text-shadow: 0 0 15px rgba(249, 115, 22, 0.4); }
+.stage-s3 { color: var(--soc-red); text-shadow: 0 0 15px var(--soc-red-glow); }
+.stage-s4 { color: #ff0055; text-shadow: 0 0 25px rgba(255, 0, 85, 0.8); animation: dangerPulse 1s infinite alternate; }
+
+@keyframes dangerPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.03); }
+}
+
+.stage-status-desc {
+  font-size: 0.75rem;
+  color: var(--soc-text-dim);
+  font-family: var(--soc-mono);
+}
+
+/* Mismatch vs Tau Bar */
+.metric-box {
+  background: #090e1a;
+  border: 1px solid var(--soc-panel-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.mismatch-meter-wrapper {
+  margin: 1rem 0;
+}
+
+.meter-track {
+  height: 20px;
+  background: #1e293b;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #334155;
+}
+
+.meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #00f2fe);
+  border-radius: 10px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+
+.meter-fill.danger {
+  background: linear-gradient(90deg, #f97316, #ef4444) !important;
+  box-shadow: 0 0 15px var(--soc-red-glow);
+}
+
+.meter-threshold-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #ff0055;
+  box-shadow: 0 0 8px #ff0055;
+  z-index: 10;
+}
+
+.meter-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--soc-mono);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  color: var(--soc-text-dim);
+}
+
+/* Parameter Grid */
+.params-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--soc-mono);
+  font-size: 0.85rem;
+}
+
+.params-table td {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #131d33;
+}
+
+.params-table td:last-child {
+  text-align: right;
+  font-weight: 700;
+  color: var(--soc-accent);
+}
+
+/* Attack Accelerator Buttons */
+.attack-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.btn-attack {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.65rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: var(--soc-mono);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btn-attack:hover {
+  background: var(--soc-red);
+  color: white;
+  box-shadow: 0 0 15px var(--soc-red-glow);
+}
+
+.btn-reset {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 0.65rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--soc-mono);
+  cursor: pointer;
+  width: 100%;
+  margin-top: 0.75rem;
+  transition: all 0.2s;
+}
+
+.btn-reset:hover {
+  background: var(--soc-green);
+  color: white;
+  box-shadow: 0 0 15px var(--soc-green-glow);
+}
+
+/* Live Threat Feed Table */
+.feed-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--soc-mono);
+  font-size: 0.8rem;
+}
+
+.feed-table th {
+  background: #090e1a;
+  color: var(--soc-text-dim);
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--soc-panel-border);
+}
+
+.feed-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #131d33;
+}
+
+.feed-row-threat {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.soc-tag {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  display: inline-block;
+}
+
+.tag-ok { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+.tag-forgery { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); }
+.tag-impersonation { background: rgba(249, 115, 22, 0.2); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.5); }
+.tag-replay { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.5); }
+.tag-unauth { background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.5); }
+.tag-channel { background: rgba(255, 0, 85, 0.25); color: #ff4d88; border: 1px solid rgba(255, 0, 85, 0.6); }

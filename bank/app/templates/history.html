@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Ledger · ShorlyNot Bank{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Quantum Audit Ledger</h2>
+      <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
+        Complete chronological ledger of signed financial transactions and quantum verification metrics.
+      </p>
+    </div>
+    <span class="quantum-badge">Entries: {{ transactions|length }}</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Tx ID</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Amount</th>
+          <th>Mismatch ($\hat{p}$)</th>
+          <th>Threshold ($\tau$)</th>
+          <th>Threat Verdict</th>
+          <th>Stage</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if transactions %}
+          {% for tx in transactions %}
+            <tr>
+              <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-muted);">
+                {{ tx.timestamp.split('T')[1][:8] }}
+              </td>
+              <td><code>{{ tx.tx_id[:12] }}...</code></td>
+              <td><strong>{{ tx.from_user }}</strong></td>
+              <td><strong>{{ tx.to_user }}</strong></td>
+              <td>₹{{ "{:,.2f}".format(tx.amount) }}</td>
+              <td><code>{{ tx.mismatch_rate }}</code></td>
+              <td><code>{{ tx.tau }}</code></td>
+              <td>
+                <span class="badge {% if tx.threat_label == 'OK' %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ tx.threat_label }}
+                </span>
+              </td>
+              <td><span class="badge badge-info">S{{ tx.stage_s }}</span></td>
+              <td>
+                <span class="badge {% if tx.status == 'COMMITTED' %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ tx.status }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+              No ledger records found.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

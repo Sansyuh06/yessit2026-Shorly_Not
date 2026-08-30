@@ -33,6 +33,8 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+*.egg-link
+**/*.egg-info/
 
 # IDE & OS
 .vscode/

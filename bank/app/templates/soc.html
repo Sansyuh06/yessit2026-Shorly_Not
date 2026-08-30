@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOC Console · ShorlyNot Q-STDF Threat Monitoring</title>
+  <link rel="stylesheet" href="/static/css/soc.css">
+</head>
+<body class="soc-body">
+  <!-- SOC Header -->
+  <header class="soc-header">
+    <div class="soc-brand">
+      <div class="soc-logo">
+        <span class="soc-pulse-indicator"></span>
+        <span>SHORLYNOT // SOC</span>
+      </div>
+      <span style="font-family: var(--soc-mono); font-size: 0.75rem; color: var(--soc-text-dim); background: #090e1a; padding: 0.25rem 0.6rem; border-radius: 4px; border: 1px solid var(--soc-panel-border);">
+        PS 26141 · QUANTUM THREAT RADAR
+      </span>
+    </div>
+
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <span id="soc-backend-badge" style="background: rgba(0, 242, 254, 0.1); color: var(--soc-accent); border: 1px solid rgba(0, 242, 254, 0.3); padding: 0.3rem 0.8rem; border-radius: 6px; font-family: var(--soc-mono); font-size: 0.8rem; font-weight: 700;">
+        BACKEND: {{ stage_state.backend.value.upper() }}
+      </span>
+      <a href="/home" target="_blank" style="color: var(--soc-text-dim); text-decoration: none; font-size: 0.85rem; padding: 0.3rem 0.8rem; border: 1px solid var(--soc-panel-border); border-radius: 6px;">
+        Open Customer Bank &rarr;
+      </a>
+    </div>
+  </header>
+
+  <!-- SOC Main Grid -->
+  <div class="soc-grid">
+    <!-- Left Column: Stage Gauges, Mismatch Meter & Attack Panel -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Stage Cards -->
+      <div class="soc-panel">
+        <div class="soc-panel-title">
+          <span>Security Stage Telemetry</span>
+          <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-accent);">LIVE STATUS</span>
+        </div>
+
+        <div class="stage-grid">
+          <div class="stage-card">
+            <div class="stage-label">Signature Stage</div>
+            <div id="soc-stage-s" class="stage-value stage-s{{ stage_state.stage_s.value }}">
+              S{{ stage_state.stage_s.value }}
+            </div>
+            <div id="soc-stage-s-desc" class="stage-status-desc">
+              {% if stage_state.stage_s.value == 0 %}Normal · All Operational{% elif stage_state.stage_s.value == 1 %}Anomaly Warn{% elif stage_state.stage_s.value == 2 %}Transfers Blocked{% elif stage_state.stage_s.value == 3 %}Read-Only Mode{% else %}CRITICAL LOCKDOWN{% endif %}
+            </div>
+          </div>
+
+          <div class="stage-card">
+            <div class="stage-label">QKD Link Stage</div>
+            <div id="soc-stage-q" class="stage-value" style="color: #38bdf8;">
+              Q{{ stage_state.stage_q.value }}
+            </div>
+            <div id="soc-stage-q-desc" class="stage-status-desc">
+              {% if stage_state.stage_q.value == 0 %}QBER < 5% (Healthy){% else %}Elevated Link QBER{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Mismatch vs Tau Meter -->
+        <div class="metric-box">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--soc-text-dim); text-transform: uppercase;">
+              Quantum Mismatch ($\hat{p}$) vs Hoeffding Bound ($\tau$)
+            </span>
+            <span id="soc-last-threat" class="soc-tag tag-{{ stage_state.last_threat.value.lower().replace('_', '-') }}">
+              {{ stage_state.last_threat.value }}
+            </span>
+          </div>
+
+          <div class="mismatch-meter-wrapper">
+            <div class="meter-track">
+              <div id="soc-meter-fill" class="meter-fill {% if stage_state.last_mismatch > stage_state.tau %}danger{% endif %}" style="width: {{ (stage_state.last_mismatch / 0.60 * 100)|int }}%;"></div>
+              <div id="soc-tau-marker" class="meter-threshold-marker" style="left: {{ (stage_state.tau / 0.60 * 100)|int }}%;" title="Hoeffding Threshold tau"></div>
+            </div>
+            <div class="meter-labels">
+              <span>0.00</span>
+              <span>Mismatch: <strong id="soc-mismatch-val">{{ "%.4f"|format(stage_state.last_mismatch) }}</strong></span>
+              <span>Threshold $\tau$: <strong id="soc-tau-val" style="color: #ff0055;">{{ "%.4f"|format(stage_state.tau) }}</strong></span>
+              <span>0.60</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mathematical Parameters -->
+        <table class="params-table">
+          <tr>
+            <td>Noise Floor ($p_0$)</td>
+            <td>0.02 (2.0%)</td>
+          </tr>
+          <tr>
+            <td>Check Positions ($n$)</td>
+            <td>64 Qubits</td>
+          </tr>
+          <tr>
+            <td>False-Reject Budget ($\delta$)</td>
+            <td>0.01 (Normal Preset)</td>
+          </tr>
+          <tr>
+            <td>Theoretical $P_{\text{forge}}$</td>
+            <td>&lt; 9.40 &times; 10<sup>-7</sup></td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Attack Shortcuts Panel -->
+      <div class="soc-panel">
+        <div class="soc-panel-title">
+          <span>Attack Simulation Injectors</span>
+          <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: #f87171;">DEMO WEAPONS</span>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--soc-text-dim); margin-bottom: 0.5rem;">
+          Trigger live signature attack scenarios to demonstrate immediate threshold detection and stage escalation:
+        </p>
+
+        <div class="attack-buttons-grid">
+          <button type="button" class="btn-attack" data-attack="forgery">FORGERY</button>
+          <button type="button" class="btn-attack" data-attack="impersonation">IMPERSONATE</button>
+          <button type="button" class="btn-attack" data-attack="replay">REPLAY</button>
+          <button type="button" class="btn-attack" data-attack="unauth_verify">UNAUTH</button>
+          <button type="button" class="btn-attack" data-attack="channel">CHANNEL</button>
+        </div>
+
+        <button type="button" id="soc-reset-btn" class="btn-reset">
+          RESET SECURITY STAGES (S0, Q0)
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Column: Real-Time Event Stream -->
+    <div class="soc-panel">
+      <div class="soc-panel-title">
+        <span>Live Quantum Telemetry & Threat Event Stream</span>
+        <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-green);">AUTO-REFRESHING</span>
+      </div>
+
+      <div style="flex: 1; overflow-y: auto; max-height: 650px;">
+        <table class="feed-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Threat Verdict</th>
+              <th>Stage</th>
+              <th>$\hat{p}$</th>
+              <th>$\tau$</th>
+              <th>Actor</th>
+              <th>Event Summary</th>
+            </tr>
+          </thead>
+          <tbody id="soc-feed-body">
+            {% for event in events %}
+              <tr class="{% if event.threat_label != 'OK' %}feed-row-threat{% endif %}">
+                <td>{{ event.timestamp.split('T')[1][:8] }}</td>
+                <td>
+                  <span class="soc-tag tag-{{ event.threat_label.lower().replace('_', '-') }}">
+                    {{ event.threat_label }}
+                  </span>
+                </td>
+                <td>S{{ event.stage_s }} / Q{{ event.stage_q }}</td>
+                <td>{{ "%.4f"|format(event.mismatch_rate) }}</td>
+                <td>{{ "%.4f"|format(event.tau) }}</td>
+                <td>{{ event.actor or 'system' }}</td>
+                <td title="{{ event.details }}">{{ event.details[:45] }}{% if event.details|length > 45 %}...{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/soc.js"></script>
+</body>
+</html>

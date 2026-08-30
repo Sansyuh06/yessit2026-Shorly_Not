@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ShorlyNot Bank · Quantum-Secured Banking{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/bank.css">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <a href="/home" class="brand">
+      <div class="brand-icon">⚛</div>
+      <div>
+        <span>ShorlyNot</span><span style="color: var(--primary); font-weight: 800;">Bank</span>
+      </div>
+    </a>
+    
+    <div class="nav-links">
+      {% if current_user %}
+        <a href="/home" class="{% if active_tab == 'home' %}active{% endif %}">Dashboard</a>
+        <a href="/transfer" class="{% if active_tab == 'transfer' %}active{% endif %}">Transfer</a>
+        <a href="/history" class="{% if active_tab == 'history' %}active{% endif %}">History</a>
+        <a href="/soc" target="_blank" class="nav-soc-btn">
+          <span style="width: 8px; height: 8px; background: #38bdf8; border-radius: 50%; display: inline-block;"></span>
+          SOC Console
+        </a>
+        <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600; margin-left: 0.5rem;">
+          {{ current_user.username }} ({{ current_user.role }})
+        </span>
+        <a href="/logout" style="color: var(--danger); margin-left: 0.25rem;">Logout</a>
+      {% else %}
+        <a href="/soc" target="_blank" class="nav-soc-btn">SOC Console</a>
+        <a href="/login" class="btn btn-primary" style="padding: 0.4rem 1rem;">Login</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Security Banner if Bank Stage S >= 2 -->
+  {% if stage_state and stage_state.stage_s.value >= 2 %}
+    <div style="background: #dc2626; color: white; padding: 0.75rem 2rem; text-align: center; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+      <span>⚠️ SECURITY ALERT: Bank in Stage S{{ stage_state.stage_s.value }}</span>
+      <span style="font-weight: 500;">
+        {% if stage_state.stage_s.value == 2 %}
+          Signature threats detected. New transfers suspended by security policy.
+        {% elif stage_state.stage_s.value == 3 %}
+          Pattern attack detected. System in read-only audit mode.
+        {% elif stage_state.stage_s.value == 4 %}
+          CRITICAL LOCKDOWN: Bank application locked. Contact operations.
+        {% endif %}
+      </span>
+      <a href="/soc" target="_blank" style="color: #fecaca; text-decoration: underline; margin-left: 0.5rem;">View in SOC &rarr;</a>
+    </div>
+  {% endif %}
+
+  <!-- Main Content Area -->
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+      <span>Powered by <strong>ShorlyNot Skeleton</strong> (SIH 2026 PS 26141)</span>
+      <span class="quantum-badge">Protocol: ShorlyNot-QDS-T1</span>
+      <span class="quantum-badge">Detection: Q-STDF (No ML)</span>
+      <span class="quantum-badge">Backend: {{ stage_state.backend.value.upper() if stage_state else 'SIM' }}</span>
+    </div>
+  </footer>
+
+  <script src="/static/js/bank.js"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
