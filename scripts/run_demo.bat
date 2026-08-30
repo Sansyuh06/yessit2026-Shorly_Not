@@ -7,6 +7,8 @@ echo ======================================================================
 echo.
 
 set HOST=0.0.0.0
+set SHORLYNOT_REQUIRE_API=1
+set SHORLYNOT_API_URL=http://127.0.0.1:8000
 
 echo [*] Installing dependencies and skeleton package...
 pip install -r requirements.txt -e skeleton --quiet
@@ -16,7 +18,7 @@ start "ShorlyNot Skeleton API (:8000)" cmd /k "cd skeleton && uvicorn shorlynot_
 
 timeout /t 2 /nobreak >nul
 
-echo [*] Starting ShorlyNot Mock Bank & SOC on %HOST%:8080...
+echo [*] Starting ShorlyNot Mock Bank & SOC on %HOST%:8080 (Strict API Enforcement Active)...
 start "ShorlyNot Bank Portal & SOC (:8080)" cmd /k "uvicorn bank.app.main:app --host %HOST% --port 8080"
 
 timeout /t 2 /nobreak >nul

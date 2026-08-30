@@ -3,11 +3,11 @@
 
 | Metric | Status |
 |---|---|
-| Product Version | **3.0.0 ONE-SHOT** |
+| Product Version | **3.0.0 ONE-SHOT (Hardened)** |
 | Named Protocol | **ShorlyNot-QDS-T1** |
 | Detection Engine | **Q-STDF (Non-ML Hoeffding Bounds)** |
-| Pytest Test Suite | **20 / 20 PASSED (100%)** |
-| Verification Complexity | **$O(n)$ per transfer** |
+| Pytest Test Suite | **39 / 39 PASSED (100%)** |
+| Verification Complexity | **$\mathcal{O}(n)$ per transfer ($< 1$ ms)** |
 | Fit Test Verification | **PASS (&lt; 2 Minutes)** |
 
 ---
@@ -27,6 +27,8 @@
 | **§4.1 & B6** | BB84 QKD Session Key & PQC Syndrome Protection | `qkd/bb84.py`, `pqc/protect.py` | `test_honest_pipeline_transfer_success` |
 | **§11** | 5 Attack Vectors (Forgery, Impersonation, Replay, Unauth, Channel) | `attacks/` | `test_attacks.py` (5 tests) |
 | **§3.11 & B2.9**| Monte Carlo $P_{\text{forge}}$, Latency & Curves vs $n \in \{32, 64, 128\}$ | `analysis/benchmark.py` | `docs/BENCHMARKS.md` |
+| **Dual Engine** | Cross-Framework Parity (PennyLane + Qiskit Aer) | `engines/pennylane_engine.py` | `test_pennylane_engine.py` (5 tests) |
+| **Key Registry**| Dynamic QKD Provisioning Ceremony & Bindings | `qkd/key_registry.py` | `test_impersonation_attack_vector` |
 | **§7 & C4** | Skeleton REST API (:8000) & CLI Tool | `api/app.py`, `cli.py` | Live OpenAPI Docs |
 | **§8 & B5** | Mock Bank Web Portal (:8080) & Real-Time Dark SOC (`/soc`) | `bank/app/` | `test_bank.py` (4 tests) |
 | **§8.4** | App-Level Lockdown (No iptables / OS hooks) | `bank/app/main.py` | `test_bank_transfers_blocked_when_attack_escalates_stage` |
@@ -61,4 +63,6 @@
 - [x] Transfers route strictly through skeleton engine.
 - [x] Zero ML imports in detection engine.
 - [x] Monte Carlo benchmarks published to `docs/BENCHMARKS.md`.
-- [x] 100% Green Pytest suite (20/20 passing).
+- [x] 100% Green Pytest suite (39/39 passing).
+- [x] Security proofs documented in `docs/SECURITY_ANALYSIS.md`.
+- [x] Complete traceability in `docs/DELIVERY_TABLE.md`.

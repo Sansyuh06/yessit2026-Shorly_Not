@@ -8,6 +8,8 @@ echo "  Quantum Digital Signatures (ShorlyNot-QDS-T1) & Q-STDF Threat Engine"
 echo "======================================================================"
 
 HOST="${HOST:-0.0.0.0}"
+export SHORLYNOT_REQUIRE_API=1
+export SHORLYNOT_API_URL="http://127.0.0.1:8000"
 
 echo "[*] Installing dependencies and skeleton package..."
 pip install -r requirements.txt -e skeleton --quiet
@@ -18,7 +20,7 @@ SKELETON_PID=$!
 
 sleep 2
 
-echo "[*] Launching ShorlyNot Bank & SOC on $HOST:8080..."
+echo "[*] Launching ShorlyNot Bank & SOC on $HOST:8080 (Strict API Enforcement Active)..."
 uvicorn bank.app.main:app --host "$HOST" --port 8080 &
 BANK_PID=$!
 

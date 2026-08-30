@@ -26,11 +26,17 @@ class SkeletonServiceClient:
     def __init__(self, base_url: Optional[str] = None):
         # Default to environment variable or standard port 8000
         self.base_url = base_url or os.environ.get("SHORLYNOT_API_URL", "http://127.0.0.1:8000")
+        self.require_api = os.environ.get("SHORLYNOT_REQUIRE_API", "0").lower() in ("1", "true", "yes")
         self._shared_singleton = None
 
     @property
     def shared_pipeline(self):
         """Lazy-import the API singleton if running in unified in-process mode."""
+        if self.require_api:
+            raise RuntimeError(
+                f"SHORLYNOT_REQUIRE_API=1 is active, but Skeleton API at {self.base_url} is unreachable. "
+                f"Dual-process mode prohibits silent in-process fallback to prevent state desynchronization."
+            )
         if self._shared_singleton is None:
             from shorlynot_skeleton.api.app import pipeline
             self._shared_singleton = pipeline
@@ -50,8 +56,12 @@ class SkeletonServiceClient:
                 resp = client.post("/v1/pipeline/transfer", json=req.model_dump())
                 if resp.status_code in (200, 403, 423):
                     return PipelineResult(**resp.json())
-        except (httpx.ConnectError, httpx.TimeoutException):
-            pass
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if self.require_api:
+                raise RuntimeError(
+                    f"Skeleton API at {self.base_url} is unreachable ({type(e).__name__}). "
+                    f"SHORLYNOT_REQUIRE_API=1 prevents fallback to ensure centralized stage enforcement."
+                ) from e
         except Exception as e:
             raise RuntimeError(f"Skeleton API communication error: {e}") from e
 
@@ -64,8 +74,12 @@ class SkeletonServiceClient:
                 resp = client.get("/v1/stages")
                 if resp.status_code == 200:
                     return StageState(**resp.json())
-        except (httpx.ConnectError, httpx.TimeoutException):
-            pass
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if self.require_api:
+                raise RuntimeError(
+                    f"Skeleton API at {self.base_url} is unreachable ({type(e).__name__}). "
+                    f"SHORLYNOT_REQUIRE_API=1 is active."
+                ) from e
         except Exception as e:
             raise RuntimeError(f"Skeleton API communication error: {e}") from e
 
@@ -77,8 +91,12 @@ class SkeletonServiceClient:
                 resp = client.get(f"/v1/stages/events?limit={limit}")
                 if resp.status_code == 200:
                     return [StageEvent(**e) for e in resp.json()]
-        except (httpx.ConnectError, httpx.TimeoutException):
-            pass
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if self.require_api:
+                raise RuntimeError(
+                    f"Skeleton API at {self.base_url} is unreachable ({type(e).__name__}). "
+                    f"SHORLYNOT_REQUIRE_API=1 is active."
+                ) from e
         except Exception as e:
             raise RuntimeError(f"Skeleton API communication error: {e}") from e
 
@@ -93,8 +111,12 @@ class SkeletonServiceClient:
                 )
                 if resp.status_code in (200, 403, 423):
                     return PipelineResult(**resp.json())
-        except (httpx.ConnectError, httpx.TimeoutException):
-            pass
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if self.require_api:
+                raise RuntimeError(
+                    f"Skeleton API at {self.base_url} is unreachable ({type(e).__name__}). "
+                    f"SHORLYNOT_REQUIRE_API=1 is active."
+                ) from e
         except Exception as e:
             raise RuntimeError(f"Skeleton API communication error: {e}") from e
 
@@ -122,8 +144,12 @@ class SkeletonServiceClient:
                 resp = client.post("/v1/stages/reset")
                 if resp.status_code == 200:
                     return resp.json()
-        except (httpx.ConnectError, httpx.TimeoutException):
-            pass
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if self.require_api:
+                raise RuntimeError(
+                    f"Skeleton API at {self.base_url} is unreachable ({type(e).__name__}). "
+                    f"SHORLYNOT_REQUIRE_API=1 is active."
+                ) from e
         except Exception as e:
             raise RuntimeError(f"Skeleton API communication error: {e}") from e
 
@@ -137,8 +163,12 @@ class SkeletonServiceClient:
                 resp = client.get("/v1/metrics")
                 if resp.status_code == 200:
                     return MetricSummary(**resp.json())
-        except (httpx.ConnectError, httpx.TimeoutException):
-            pass
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if self.require_api:
+                raise RuntimeError(
+                    f"Skeleton API at {self.base_url} is unreachable ({type(e).__name__}). "
+                    f"SHORLYNOT_REQUIRE_API=1 is active."
+                ) from e
         except Exception as e:
             raise RuntimeError(f"Skeleton API communication error: {e}") from e
 

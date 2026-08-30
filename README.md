@@ -77,10 +77,24 @@ chmod +x ./scripts/run_demo.sh
 - **Real-Time SOC Console**: [http://127.0.0.1:8080/soc](http://127.0.0.1:8080/soc)
 - **Skeleton OpenAPI Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
+## Architecture Honesty & Scientific Grounding
+
+| Architectural Layer | Implementation Truth | Scientific & Engineering Rationale |
+|---|---|---|
+| **Sign Path** | **Real 3-Qubit Qiskit Aer Circuits** | Alice executes real Bell teleportation circuits on `AerSimulator` to generate authentic syndromes $(m_1, m_2)$. |
+| **Verify Path** | **$\mathcal{O}(n)$ Born-Rule Statevector Evaluation** | Bob evaluates syndrome consistency via analytical Born-rule projection under depolarizing noise $p_0$, ensuring sub-millisecond edge verification complexity without heavy QPU simulation overhead. Full Aer circuit mode is also supported. |
+| **Detection Engine** | **Strict Zero-ML Hoeffding Bounds** | Thresholds derived from $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$; asserted with test asserting 0 ML libraries in `sys.modules`. |
+| **QKD Layer** | **BB84 Statistical Simulation** | Support layer generating 256-bit symmetric session keys and tracking channel QBER ($Q_0 \to Q_4$). |
+| **PQC Layer** | **AES-256-GCM Classical Wrapping** | Authenticated encryption protecting classical correction bits, with `MlKem768Interface` reference stub. |
+| **Hardware Backend** | **Qiskit Aer Default, Real IBM When Available** | Defaults to `sim` (Aer); gracefully switches to real IBM QPUs only when `IBM_QUANTUM_TOKEN` is supplied. Never fakes IBM hardware. |
+| **Bank Enforcement** | **App-Level Session & Transfer Lockout** | Security stages $S_0 \to S_4$ act at the application gateway; no unsafe OS-level `iptables` or root hooks. |
+
+See [SECURITY_ANALYSIS.md](docs/SECURITY_ANALYSIS.md) and [DELIVERY_TABLE.md](docs/DELIVERY_TABLE.md) for full formal derivations and compliance mappings.
+
 ---
 
 ## Running Tests
 
 ```bash
-pytest skeleton/tests bank/tests -v
+pytest -v
 ```
