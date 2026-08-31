@@ -7,8 +7,19 @@
 | **00:15 - 00:35** | Honest Quantum Transfer | Transfer: `http://127.0.0.1:8080/transfer` | Recipient: `bob`<br>Amount: `₹5,000`<br>Click **Sign with QDS & Execute Transfer** | "Alice initiates a transfer. The system creates Bell pairs $|\Phi^+\rangle$, performs Bell measurements on 64 check positions, encrypts syndromes via BB84 session keys, and verifies on Bob's end. Mismatch error $\hat{p} = 0.00 \le \tau = 0.2097$. The transfer commits instantly." |
 | **00:35 - 00:55** | Live Attack Detection | Dark SOC Radar: `http://127.0.0.1:8080/soc` | Click **FORGERY** button | "Now an adversary attempts a signature forgery without Alice's entangled quantum state. Bob's projective verification yields an empirical error rate $\hat{p} \approx 50.0\%$, blowing through our Hoeffding threshold $\tau = 0.21$. Q-STDF detects the forgery and escalates to Stage S2." |
 | **00:55 - 01:10** | Bank Application Lockdown | Bank Portal: `http://127.0.0.1:8080/transfer` | Refresh or attempt transfer | "Notice that without modifying OS iptables or touching hardware, the Bank immediately refuses all new transfers at the application layer, displaying the exact Hoeffding parameters $p_0=0.02, \delta=0.01, n=64, \tau=0.2097$." |
-| **01:10 - 01:25** | Channel Tampering & Critical Lock | SOC Console $\to$ Bank Portal | On `/soc`, click **CHANNEL** $\to$ Open Bank (`/home` or `/locked`) | "If Eve intercepts the quantum channel or corrupts PQC syndromes, the system detects entanglement collapse and escalates to Stage S4 Critical Lockdown, redirecting all users to the emergency lockout console." |
-| **01:25 - 01:30** | Recovery & Conclusion | SOC Console: `http://127.0.0.1:8080/soc` | Click **RESET SECURITY STAGES** | "The operator investigates the incident in the SOC log, resets stages back to S0, and normal operations resume. Zero ML, 100% mathematically proven security." |
+| **01:10 - 01:25** | Channel Tampering & Q-Stage Escalation | SOC Console $\to$ Bank Portal | On `/soc`, click **CHANNEL** $\to$ Open Bank (`/home` or `/locked`) | "If Eve intercepts the quantum channel or corrupts PQC syndromes, the system detects elevated QBER (spiking to ~15.0%, moving the QKD stage from Q0 to Q3) and escalates to Stage S4 Critical Lockdown, immediately redirecting all users to the emergency lockout console." |
+| **01:25 - 01:30** | Recovery & Conclusion | SOC Console: `http://127.0.0.1:8080/soc` | Click **RESET SECURITY STAGES** | "The operator investigates the incident in the SOC log, resets stages back to S0/Q0, and normal operations resume. Zero ML, 100% mathematically proven security." |
+
+---
+
+### One-Shot Automated Attack Suite Execution
+To run all 8 attack vectors and defense validations non-interactively via CLI:
+```bash
+./scripts/demo_attacks.sh
+# or on Windows:
+python scripts/demo_attacks.py
+```
+Outputs clear `[PASS]` lines across honest transfer, forgery, channel tampering (with Q-stage escalation), nonce replay, impersonation, parameter downgrade, and bank application lockout.
 
 ---
 

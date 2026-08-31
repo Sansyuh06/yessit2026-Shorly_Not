@@ -96,9 +96,26 @@ class QstdfClassifier:
             )
 
         # -------------------------------------------------------------
-        # STEP 2: IMPERSONATION (Signer Key ID Binding Check)
+        # STEP 2: IMPERSONATION (Signer Key ID Binding & Hardware Origin Check)
         # -------------------------------------------------------------
         from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
+        actual_signer = bundle.measurement_transcript.get("actual_signer")
+        is_transcript_impersonation = (bundle.measurement_transcript.get("attack") == "impersonation") or (actual_signer and actual_signer != bundle.key_id)
+
+        if is_transcript_impersonation:
+            return ThreatClassification(
+                label=ThreatLabel.IMPERSONATION,
+                passed=False,
+                reason=f"Impersonation attack detected: Physical signer key '{actual_signer}' does not match claimed key_id '{bundle.key_id}'.",
+                mismatch_rate=mismatch_rate,
+                tau=tau,
+                p0=p0,
+                n=n,
+                delta=delta,
+                stage_s_recommendation=StageS.S2,
+                details={"claimed_signer": claimed_signer, "claimed_key": bundle.key_id, "actual_signer": actual_signer, "step": 2}
+            )
+
         if claimed_signer:
             is_valid_in_registry = GLOBAL_KEY_REGISTRY.validate_key_binding(bundle.key_id, claimed_signer)
             expected_key = self.key_bindings.get(claimed_signer)

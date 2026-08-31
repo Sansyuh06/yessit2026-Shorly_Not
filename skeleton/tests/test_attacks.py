@@ -8,6 +8,7 @@ from shorlynot_skeleton.models import (
     TransferPipelineRequest,
     ThreatLabel,
     StageS,
+    StageQ,
     TauPreset
 )
 
@@ -37,6 +38,8 @@ def test_impersonation_attack_vector():
     res = pipeline.execute_transfer(req)
     assert res.success is False
     assert res.threat_classification.label == ThreatLabel.IMPERSONATION
+    assert res.signature_bundle.key_id == "alice-key-1"
+    assert res.signature_bundle.measurement_transcript.get("actual_signer") == "eve-key-1"
     assert res.stage_s >= StageS.S2
 
 
@@ -80,6 +83,8 @@ def test_channel_attack_vector():
     assert res.success is False
     assert res.threat_classification.label in (ThreatLabel.CHANNEL, ThreatLabel.FORGERY)
     assert res.stage_s >= StageS.S2
+    assert res.qber >= 0.12
+    assert res.stage_q != StageQ.Q0
 
 
 def test_parameter_tampering_downgrade_attack_vector():

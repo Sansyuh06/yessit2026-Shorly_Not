@@ -63,6 +63,6 @@
 - [x] Transfers route strictly through skeleton engine.
 - [x] Zero ML imports in detection engine.
 - [x] Monte Carlo benchmarks published to `docs/BENCHMARKS.md`.
-- [x] 100% Green Pytest suite (39/39 passing).
+- [x] 100% Green Pytest suite (42/42 passing).
 - [x] Security proofs documented in `docs/SECURITY_ANALYSIS.md`.
 - [x] Complete traceability in `docs/DELIVERY_TABLE.md`.

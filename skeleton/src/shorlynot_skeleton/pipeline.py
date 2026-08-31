@@ -62,7 +62,12 @@ class QuantumTransferPipeline:
 
         # Step 1: QKD Session Negotiation
         qkd_result = self.qkd.negotiate_session()
-        self.stage_machine.update_qber(qkd_result.qber)
+        if request.simulate_attack == "channel":
+            # Channel attack injects elevated eavesdropping QBER on the quantum link (15% QBER -> Stage Q3)
+            qkd_result.qber = 0.15
+            self.stage_machine.update_qber(0.15)
+        else:
+            self.stage_machine.update_qber(qkd_result.qber)
         stage_q = self.stage_machine.stage_q
 
         # Check if active transfers allowed under current stage S
@@ -120,7 +125,12 @@ class QuantumTransferPipeline:
         if request.simulate_attack == "forgery":
             bundle = ForgeryAttack.generate_forged_bundle(payload_hash=payload_hash, claimed_key_id=signer_key)
         elif request.simulate_attack == "impersonation":
-            bundle = ImpersonationAttack.generate_impersonated_bundle(payload_hash=payload_hash, attacker_key_id="eve-key-1", qds_protocol=self.qds)
+            bundle = ImpersonationAttack.generate_impersonated_bundle(
+                payload_hash=payload_hash,
+                claimed_key_id=signer_key,
+                attacker_key_id="eve-key-1",
+                qds_protocol=self.qds
+            )
         elif request.simulate_attack == "replay":
             # Replay by pre-registering nonce
             self.classifier.record_nonce(bundle.nonce)

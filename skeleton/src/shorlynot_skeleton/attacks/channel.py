@@ -36,7 +36,11 @@ class ChannelTamperingAttack:
         if tampered_bundle.protected_corrections:
             # Corrupt ciphertext bytes
             raw = list(tampered_bundle.protected_corrections)
-            if len(raw) > 10:
+            if len(raw) > 5:
                 raw[5] = 'X' if raw[5] != 'X' else 'Y'
+            elif len(raw) > 0:
+                raw[-1] = 'X' if raw[-1] != 'X' else 'Y'
             tampered_bundle.protected_corrections = "".join(raw)
+        else:
+            tampered_bundle.protected_corrections = "CORRUPTED_CIPHERTEXT_PAYLOAD"
         return tampered_bundle

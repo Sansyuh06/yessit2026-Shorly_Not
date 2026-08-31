@@ -8,4 +8,5 @@
 6. **Shor, P. W., & Preskill, J.** (2000). *Simple Proof of Security of the BB84 Quantum Key Distribution Protocol*. Physical Review Letters, 85(2), 441–444.
 7. **Lu, Y., et al.** (2022). *Verifiable Arbitrated Quantum Signature Scheme via Controlled Teleportation*. Entropy, 24(1), 111.
 8. **Hoeffding, W.** (1963). *Probability inequalities for sums of bounded random variables*. Journal of the American Statistical Association, 58(301), 13–30.
-9. **NIST FIPS 203** (2024). *Module-Lattice-Based Key-Encapsulation Mechanism Standard (ML-KEM)*.
+9. **Grasselli, F., et al.** (2025). *Practical Quantum Digital Signatures over Deployed Networks*. arXiv:2508.05355.
+10. **NIST FIPS 203** (2024). *Module-Lattice-Based Key-Encapsulation Mechanism Standard (ML-KEM)*.

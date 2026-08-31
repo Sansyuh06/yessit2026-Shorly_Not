@@ -7,13 +7,16 @@
 [![Protocol](https://img.shields.io/badge/protocol-ShorlyNot--QDS--T1-orange.svg)](docs/MODEL.md)
 [![Detection](https://img.shields.io/badge/detection-Q--STDF%20(No--ML)-green.svg)](docs/MODEL.md)
 
+> [!IMPORTANT]
+> **Source of Truth Branch**: All active code, hardened security features, and evaluation deliverables are on the **`main`** branch. The `master` branch is a stale historical branch. Ensure your workspace is checked out to `main` (`git checkout main`).
+
 ---
 
 ## What is ShorlyNot?
 
 **ShorlyNot** is a quantum security software framework and financial application proof-of-concept created for SIH 2026 Problem Statement 26141:
 1. **`skeleton/`** (The Core Framework): An embeddable security SDK and REST API delivering **ShorlyNot-QDS-T1** (teleportation-assisted Quantum Digital Signatures) and **Q-STDF** (Quantum Statistical Threat Detection Framework) using rigorous Hoeffding statistical bounds instead of black-box ML.
-2. **`bank/`** (The Operational Proof): A realistic mock banking application where every transaction is quantum-signed and verified. Signature attacks (forgery, impersonation, replay, unauthorized verification, channel tampering) are flagged in real-time, driving application-level lockouts.
+2. **`bank/`** (The Operational Proof): A realistic mock banking application where every transaction is quantum-signed and verified. Signature attacks (forgery, impersonation, replay, unauthorized verification, channel tampering, parameter downgrade) are flagged in real-time, driving application-level lockouts.
 
 ---
 
@@ -71,6 +74,13 @@
 ```bash
 chmod +x ./scripts/run_demo.sh
 ./scripts/run_demo.sh
+```
+
+### 3. One-Shot Automated Attack & Defense Suite
+```bash
+./scripts/demo_attacks.sh
+# or on Windows:
+python scripts/demo_attacks.py
 ```
 
 - **Bank Web Application**: [http://127.0.0.1:8080](http://127.0.0.1:8080) (Log in with `alice` / `alice123`)

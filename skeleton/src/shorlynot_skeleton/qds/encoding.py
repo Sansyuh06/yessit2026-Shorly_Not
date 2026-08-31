@@ -3,6 +3,7 @@ Pauli Eigenstate Encoding for ShorlyNot-QDS-T1.
 Normative specification from PRD §3.4 and MODEL.md §3.
 """
 
+import hashlib
 from typing import List, Tuple
 import numpy as np
 
@@ -49,7 +50,6 @@ class PauliEncoding:
         
         # Extend or slice to desired length
         while len(bits) < length:
-            import hashlib
             raw_bytes = hashlib.sha256(raw_bytes).digest()
             for b in raw_bytes:
                 for shift in range(7, -1, -1):
