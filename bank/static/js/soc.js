@@ -29,6 +29,109 @@ document.addEventListener('DOMContentLoaded', () => {
     return sum;
   }
 
+  const iptablesOutputElem = document.getElementById('iptables-terminal-output');
+  const iptablesBadgeElem = document.getElementById('iptables-mode-badge');
+  const iptablesDotElem = document.getElementById('iptables-status-dot');
+  const iptablesDropElem = document.getElementById('iptables-drop-counter');
+
+  let simulatedDropPackets = 0;
+
+  function renderIPTables(stageS, stageQ, lastThreat) {
+    if (!iptablesOutputElem) return;
+
+    if (stageS === 0) {
+      simulatedDropPackets = 0;
+      if (iptablesDotElem) iptablesDotElem.style.backgroundColor = 'var(--soc-green)';
+      if (iptablesBadgeElem) {
+        iptablesBadgeElem.innerHTML = 'POLICY: ACCEPT (S0)';
+        iptablesBadgeElem.style.color = 'var(--soc-green)';
+        iptablesBadgeElem.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        iptablesBadgeElem.style.background = 'rgba(16, 185, 129, 0.15)';
+      }
+      if (iptablesDropElem) iptablesDropElem.textContent = 'DROPPED PKTS: 0';
+
+      iptablesOutputElem.innerHTML = 
+`<span class="term-cyan">Chain INPUT (policy ACCEPT 8,421 packets, 5.2M bytes)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1     8.4K  5.2M <span class="term-green">ACCEPT</span>     tcp  --  eth0   *       0.0.0.0/0       10.0.0.80       dpt:8080 state:ESTABLISHED
+
+<span class="term-cyan">Chain FORWARD (policy ACCEPT 14.8K packets, 11.2M bytes)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1    14.8K 11.2M <span class="term-green">ACCEPT</span>     tcp  --  eth0   eth1    192.168.1.0/24  10.0.0.80       dpt:8080/tx <span class="term-dim">[QDS-T1 PASS: p̂ ≤ τ]</span>
+
+<span class="term-cyan">Chain OUTPUT (policy ACCEPT 9,120 packets, 6.4M bytes)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1     9.1K  6.4M <span class="term-green">ACCEPT</span>     all  --  *      *       0.0.0.0/0       0.0.0.0/0`;
+    } else if (stageS === 1) {
+      simulatedDropPackets += 1;
+      if (iptablesDotElem) iptablesDotElem.style.backgroundColor = 'var(--soc-yellow)';
+      if (iptablesBadgeElem) {
+        iptablesBadgeElem.innerHTML = 'POLICY: RATE-LIMIT (S1)';
+        iptablesBadgeElem.style.color = 'var(--soc-yellow)';
+        iptablesBadgeElem.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        iptablesBadgeElem.style.background = 'rgba(245, 158, 11, 0.15)';
+      }
+      if (iptablesDropElem) iptablesDropElem.textContent = `DROPPED PKTS: ${simulatedDropPackets}`;
+
+      iptablesOutputElem.innerHTML = 
+`<span class="term-cyan">Chain FORWARD (policy ACCEPT 15.2K packets, 11.6M bytes)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1       64  4.2K <span class="term-yellow">LOG</span>        tcp  --  eth0   eth1    0.0.0.0/0       10.0.0.80       LOG "Q-STDF: Anomaly p̂ elevated"
+ 2    15.1K 11.5M <span class="term-yellow">LIMIT</span>      tcp  --  eth0   eth1    0.0.0.0/0       10.0.0.80       dpt:8080 limit: avg 5/min <span class="term-dim">[ANOMALY WATCH]</span>`;
+    } else if (stageS === 2) {
+      simulatedDropPackets += Math.floor(Math.random() * 8) + 12;
+      if (iptablesDotElem) iptablesDotElem.style.backgroundColor = '#f97316';
+      if (iptablesBadgeElem) {
+        iptablesBadgeElem.innerHTML = 'POLICY: REJECT / SUSPEND (S2)';
+        iptablesBadgeElem.style.color = '#f97316';
+        iptablesBadgeElem.style.borderColor = 'rgba(249, 115, 22, 0.4)';
+        iptablesBadgeElem.style.background = 'rgba(249, 115, 22, 0.15)';
+      }
+      if (iptablesDropElem) iptablesDropElem.textContent = `DROPPED PKTS: ${simulatedDropPackets}`;
+
+      iptablesOutputElem.innerHTML = 
+`<span class="term-cyan">Chain FORWARD (policy DROP ${simulatedDropPackets} packets)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1      <span class="term-orange">${simulatedDropPackets}</span>  ${(simulatedDropPackets * 0.6).toFixed(1)}K <span class="term-orange">REJECT</span>     tcp  --  eth0   eth1    0.0.0.0/0       10.0.0.80/tx    <span class="term-orange">reject-with tcp-reset [THREAT: ${lastThreat}]</span>
+ 2     2.4K  1.8M <span class="term-green">ACCEPT</span>     tcp  --  eth0   eth1    0.0.0.0/0       10.0.0.80       dpt:8080/history,soc <span class="term-dim">(READ-ONLY)</span>`;
+    } else if (stageS === 3) {
+      simulatedDropPackets += Math.floor(Math.random() * 15) + 35;
+      if (iptablesDotElem) iptablesDotElem.style.backgroundColor = 'var(--soc-red)';
+      if (iptablesBadgeElem) {
+        iptablesBadgeElem.innerHTML = 'POLICY: DROP TRANSACTIONS (S3)';
+        iptablesBadgeElem.style.color = 'var(--soc-red)';
+        iptablesBadgeElem.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        iptablesBadgeElem.style.background = 'rgba(239, 68, 68, 0.15)';
+      }
+      if (iptablesDropElem) iptablesDropElem.textContent = `DROPPED PKTS: ${simulatedDropPackets}`;
+
+      iptablesOutputElem.innerHTML = 
+`<span class="term-cyan">Chain FORWARD (policy DROP ${simulatedDropPackets} packets)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1      <span class="term-red">${simulatedDropPackets}</span>  ${(simulatedDropPackets * 0.7).toFixed(1)}K <span class="term-red">DROP</span>       tcp  --  eth0   eth1    0.0.0.0/0       10.0.0.80/tx    <span class="term-red">[REPLAY/PARAM ISOLATION MODE]</span>
+ 2      680  420K <span class="term-green">ACCEPT</span>     tcp  --  eth0   eth1    0.0.0.0/0       10.0.0.80/audit <span class="term-dim">(AUDIT STREAM ONLY)</span>`;
+    } else { // S4
+      simulatedDropPackets += Math.floor(Math.random() * 30) + 95;
+      if (iptablesDotElem) iptablesDotElem.style.backgroundColor = '#ff0055';
+      if (iptablesBadgeElem) {
+        iptablesBadgeElem.innerHTML = 'POLICY: CRITICAL GATEWAY LOCKDOWN (S4)';
+        iptablesBadgeElem.style.color = '#ff0055';
+        iptablesBadgeElem.style.borderColor = 'rgba(255, 0, 85, 0.5)';
+        iptablesBadgeElem.style.background = 'rgba(255, 0, 85, 0.2)';
+      }
+      if (iptablesDropElem) iptablesDropElem.textContent = `DROPPED PKTS: ${simulatedDropPackets}`;
+
+      iptablesOutputElem.innerHTML = 
+`<span class="term-red">Chain INPUT (policy DROP ${simulatedDropPackets} packets)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1      <span class="term-red">${simulatedDropPackets}</span>  ${(simulatedDropPackets * 0.8).toFixed(1)}K <span class="term-red">DROP</span>       all  --  *      *       0.0.0.0/0       0.0.0.0/0       <span class="term-red">[CRITICAL: FULL QUANTUM CUTOFF]</span>
+
+<span class="term-red">Chain FORWARD (policy DROP)</span>
+ num   pkts bytes target     prot opt in     out     source          destination     info
+ 1      <span class="term-red">${simulatedDropPackets}</span>  ${(simulatedDropPackets * 0.8).toFixed(1)}K <span class="term-red">DROP</span>       all  --  *      *       0.0.0.0/0       0.0.0.0/0       <span class="term-red">[BANK LOCKED: S4]</span>`;
+    }
+  }
+
   async function fetchSocFeed() {
     try {
       const res = await fetch('/api/soc/feed');
@@ -96,6 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
       lastThreatElem.textContent = threat;
       lastThreatElem.className = `soc-tag tag-${threat.toLowerCase().replace('_', '-')}`;
 
+      // Update IPTables Live Simulation
+      renderIPTables(s, q, threat);
+
       // Update Feed Table
       if (data.events && data.events.length > 0) {
         feedBodyElem.innerHTML = data.events.map(e => {
@@ -133,7 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const atkType = btn.getAttribute('data-attack');
       btn.textContent = 'Triggering...';
       try {
-        await fetch(`/soc/attack/${atkType}`, { method: 'POST' });
+        const resp = await fetch(`/soc/attack/${atkType}`, { method: 'POST' });
+        if (resp.status === 401) {
+          alert('Operator authentication required. Please log in with ops / ops123.');
+        }
         await fetchSocFeed();
       } catch (err) {
         console.error(err);
@@ -149,7 +258,10 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.addEventListener('click', async () => {
       resetBtn.textContent = 'Resetting...';
       try {
-        await fetch('/soc/reset', { method: 'POST' });
+        const resp = await fetch('/soc/reset', { method: 'POST' });
+        if (resp.status === 401) {
+          alert('Operator authentication required. Please log in with ops / ops123.');
+        }
         await fetchSocFeed();
       } catch (err) {
         console.error(err);
@@ -159,3 +271,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
