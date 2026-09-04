@@ -8,13 +8,10 @@ from cryptography.hazmat.primitives import hashes
 
 class MlKem768Interface:
     """
-    ML-KEM-768 Key Encapsulation Mechanism Interface (NIST FIPS 203 Adapter).
-    Acts as standard contract for Post-Quantum Key Encapsulation.
-    Provides verifiable, deterministic shared-secret agreement and decapsulation.
-    Ready for liboqs-python / kyber-py native C binding.
+    Demo KEM with an ML-KEM-768-shaped API (NIST FIPS 203 key sizes). NOT a real ML-KEM implementation — a self-consistent HKDF/HMAC commit-verify scheme. Swap in kyber-py or liboqs-python for a real FIPS 203 KEM without changing this interface.
     """
 
-    ALGORITHM_NAME = "ML-KEM-768 (FIPS 203 Reference Adapter)"
+    ALGORITHM_NAME = "HKDF/HMAC demo KEM (ML-KEM-768-shaped API, not real ML-KEM)"
     PUBLIC_KEY_SIZE = 1184
     CIPHERTEXT_SIZE = 1088
     SHARED_SECRET_SIZE = 32

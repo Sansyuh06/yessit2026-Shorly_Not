@@ -34,7 +34,7 @@
 | **Verify Path** | **$\mathcal{O}(n)$ Analytical/Statevector Evaluation (Dual-Mode)** | Bob evaluates syndrome consistency via analytical Born-rule statevector projection against Bob's recorded entanglement ground truth (`sessions.py`) under depolarizing noise $p_0$ for sub-millisecond edge throughput; full Aer circuit verification mode is also selectable (`mode="circuit"`). |
 | **Detection Engine** | **Strict Zero-ML Hoeffding Bounds (Q-STDF - Zero Oracles)** | Non-ML threshold calculation $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$; blind evidence-based classification without transcript flags or injected booleans. Asserted with test confirming 0 ML libraries in `sys.modules`. |
 | **QKD Layer** | **Classical Protocol Simulation (Support)** | Statistical simulation of BB84 session key exchange (256-bit symmetric keys) with physical Eve interception and channel QBER monitoring ($Q_0 \to Q_4$). |
-| **PQC Layer** | **AES-256-GCM + ML-KEM Reference Adapter** | Authenticated symmetric encryption wrapping classical correction bits; `MlKem768Interface` provides deterministic post-quantum KEM agreement adhering to NIST FIPS 203. |
+| **PQC Layer** | **AES-256-GCM + demo KEM adapter** | Authenticated symmetric encryption wrapping classical correction bits; `MlKem768Interface` is a self-consistent HKDF/HMAC KEM with an ML-KEM-768-shaped API (swap in kyber-py/liboqs for a real NIST FIPS 203 KEM). |
 | **Hardware Backend** | **Qiskit Aer Default, Real IBM Optional** | Defaults to `sim` (Aer classical circuit simulation); switches to real IBM QPUs only when `IBM_QUANTUM_TOKEN` is provided. Aer is never claimed to be physical quantum hardware. |
 | **Bank Enforcement** | **Application-Level Bank Stages S0–S4 & Account Quarantine** | Security stages $S_0 \to S_4$ act strictly at the application gateway (refusing transfers, quarantining affected accounts, locking bank on sustained waves); no unsafe OS-level `iptables` or root firewall hooks. |
 
@@ -63,7 +63,7 @@
 ```
 .
 ├── docs/                # Mathematical models, architecture, benchmarks, security analysis
-│   ├── MODEL.md         # Normative mathematical model & formulas
+│   ├── MODEL.md         # Reference mathematical model & formulas
 │   ├── ARCHITECTURE.md  # System architecture & dataflow
 │   ├── BENCHMARKS.md    # Monte Carlo metrics & latency curves
 │   ├── KNOWN_LIMITATIONS.md # Engineering trade-offs & honesty notes
@@ -75,7 +75,7 @@
 │   │   ├── detect/      # Q-STDF non-ML threshold engine (tau.py & classifier.py)
 │   │   ├── stages/      # S0-S4 (signature) and Q0-Q4 (QKD) stage state machine
 │   │   ├── qkd/         # BB84 session key exchange & QBER monitoring
-│   │   ├── pqc/         # AES-256-GCM / ML-KEM classical syndrome encapsulation
+│   │   ├── pqc/         # AES-256-GCM + ML-KEM-shaped demo KEM (syndrome encapsulation)
 │   │   ├── attacks/     # Executable attack vectors
 │   │   ├── engines/     # Qiskit Aer & PennyLane circuit simulation engines
 │   │   ├── backends/    # Sim (Aer) and IBM Quantum Runtime

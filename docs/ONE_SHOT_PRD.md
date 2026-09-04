@@ -1,4 +1,4 @@
-# SHORLYNOT — ONE-SHOT PRD
+# SHORLYNOT — PRD SPECIFICATION
 ### SIH 2026 · PS 26141 · Complete Build Spec (Single Document)
 
 | Field | Value |
@@ -6,7 +6,7 @@
 | Product | ShorlyNot |
 | PS ID | 26141 — Quantum-Inspired Cyber Threat Detection for Digital Signature Security |
 | Org / Theme | Egreen Quanta · Blockchain & Cybersecurity · Software |
-| Version | 3.0 ONE-SHOT (Normative) |
+| Version | v3.0 (Final) |
 | Date | 2026-08-30 |
 
 ---
@@ -83,7 +83,7 @@ For each check position $i \in \{1, \dots, n\}$:
 $$\hat{p} = \frac{\sum_{i=1}^n \mathbb{I}(b_i' \ne b_i)}{n}$$
 7. Signature is candidate accepted if $\hat{p} \le \tau$ and classical protocol binding passes.
 
-### 3.7 Hoeffding Threshold $\tau$ (Normative Derivation)
+### 3.7 Hoeffding Threshold $\tau$ (Reference Derivation)
 Under honest noise floor $p_0$, the probability of false rejection is bounded by Hoeffding's inequality:
 $$\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$$
 

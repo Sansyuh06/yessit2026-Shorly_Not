@@ -11,11 +11,14 @@
 
 Under honest simulator/channel noise floor $p_0 = 0.02$ and false-reject budget $\delta = 0.01$:
 
-| Check Positions ($n$) | Noise Floor ($p_0$) | Hoeffding Threshold ($\tau$) | Theoretical $P_{\text{forge}}$ | Honest Accept Rate | Empirical $P_{\text{forge}}$ | Avg Latency (ms) |
+| Check Positions ($n$) | Noise Floor ($p_0$) | Hoeffding Threshold ($\tau$) | Theoretical $P_{\text{forge}}$ | Honest Accept Rate | Empirical $P_{\text{forge}}$ | Avg Pipeline Latency (ms) |
 |---|---|---|---|---|---|---|
 | **32** | 0.02 | **0.2882** | **1.0031e-02** | 100.0% | 0.02 | 71.642 ms |
 | **64** | 0.02 | **0.2097** | **9.4048e-07** | 100.0% | 0.0 | 90.709 ms |
 | **128** | 0.02 | **0.1541** | **7.7792e-17** | 100.0% | 0.0 | 178.398 ms |
+
+> [!NOTE]
+> **Latency decomposition**: the pipeline figure includes $n$ real Qiskit Aer sign circuits (dominant cost). Verification alone — analytic Born-rule evaluation, no circuit re-execution — is $\mathcal{O}(n)$ and runs at ~1 ms per transaction; see the `avg_verify_latency_ms` column of `benchmarks_summary.csv` (e.g. 1.068 ms at $n = 64$).
 
 ### Key Mathematical Insights:
 1. **Exponential Security Scaling**: As $n$ increases from 32 to 128, the theoretical random forgery acceptance probability $P_{\text{forge}}$ decreases exponentially from $\approx 10^{-3}$ to **$< 10^{-11}$**.

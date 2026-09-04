@@ -1,4 +1,4 @@
-check_positions,noise_floor_p0,false_reject_delta,hoeffding_tau,theoretical_p_forge,honest_accept_rate,empirical_p_forge,avg_latency_ms
+check_positions,noise_floor_p0,false_reject_delta,hoeffding_tau,theoretical_p_forge,honest_accept_rate,empirical_p_forge,avg_verify_latency_ms
 32,0.02,0.01,0.2882,1.0031e-02,1.00,0.00,0.547
 64,0.02,0.01,0.2097,9.4048e-07,1.00,0.00,1.068
 128,0.02,0.01,0.1541,7.7792e-17,1.00,0.00,2.084

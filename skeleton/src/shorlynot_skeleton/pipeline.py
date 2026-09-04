@@ -54,6 +54,7 @@ class QuantumTransferPipeline:
     def execute_transfer(self, request: TransferPipelineRequest) -> PipelineResult:
         """
         Execute full quantum-signed transfer workflow.
+        simulate_attack only constructs malicious bundles for the demo harness; it is never read by the verifier or classifier — detection is blind.
         """
         t_start = time.perf_counter()
         tx = request.transaction

@@ -1,6 +1,6 @@
 # MODEL.md — ShorlyNot-QDS-T1 Mathematical Model
 
-**Normative Specification**  
+**Reference Specification**  
 **Profile**: ShorlyNot-QDS-T1 (Teleportation Profile T1, MVP)  
 **Problem Statement**: SIH 2026 PS 26141 — Quantum-Inspired Cyber Threat Detection for Digital Signature Security
 
@@ -131,12 +131,12 @@ The random forgery acceptance probability is:
 $$P_{\text{forge, random}} = \sum_{k=0}^{\lfloor \tau n \rfloor} \binom{n}{k} \left(\frac{1}{2}\right)^n = I_{1/2}(n - \lfloor \tau n \rfloor, \lfloor \tau n \rfloor + 1)$$
 
 For $n=64, \tau=0.210 \implies \lfloor \tau n \rfloor = 13$:
-$$P_{\text{forge}} \approx \sum_{k=0}^{13} \binom{64}{k} \left(\frac{1}{2}\right)^{64} \approx 2.4 \times 10^{-6}$$
+$$P_{\text{forge}} \approx \sum_{k=0}^{13} \binom{64}{k} \left(\frac{1}{2}\right)^{64} \approx 9.4048 \times 10^{-7}$$
 
 As $n$ increases to 128:
-$$P_{\text{forge}} < 10^{-11}$$
+$$P_{\text{forge}} \approx 7.7792 \times 10^{-17}$$
 
-This exponential suppression guarantees Information-Theoretic Security bounds in the stated model without any machine learning heuristics.
+This exponential suppression provides statistical security bounds against random transcript guessing in the stated model without any machine learning heuristics (claims no information-theoretic security from hardware).
 
 ---
 
