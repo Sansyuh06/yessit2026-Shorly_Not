@@ -5,6 +5,8 @@ Normative specification from PRD §4.3 and MODEL.md §10.
 """
 
 import collections
+import os
+import sqlite3
 import time
 from typing import Dict, Optional, Set, Any
 from shorlynot_skeleton.models import (
@@ -16,6 +18,7 @@ from shorlynot_skeleton.models import (
     TauPreset
 )
 from shorlynot_skeleton.detect.tau import TauCalculator
+from shorlynot_skeleton.qds.sessions import GLOBAL_ENTANGLEMENT_STORE
 
 
 class QstdfClassifier:
@@ -23,11 +26,12 @@ class QstdfClassifier:
     Quantum Statistical Threat Detection Framework (Q-STDF).
     Strict non-ML rule-based ladder:
     1. UNAUTH_VERIFY -> verifier lacks entitlement
-    2. IMPERSONATION -> key_id / identity binding invalid
+    2. IMPERSONATION -> key_id / identity binding invalid or physical signer mismatch
     3. REPLAY -> duplicate nonce in replay window
-    4. CHANNEL -> PQC unwrap failure or transmission bit flips
-    5. FORGERY -> mismatch rate p_hat > tau
-    6. OK -> all tests pass
+    4. PARAM_TAMPER -> security parameter downgrade or array truncation
+    5. CHANNEL -> PQC unwrap / tag authentication failure
+    6. FORGERY -> mismatch rate p_hat > tau
+    7. OK -> all tests pass
     """
 
     DEFAULT_KEYS = {
@@ -39,26 +43,74 @@ class QstdfClassifier:
 
     AUTHORIZED_VERIFIERS = {"bob", "alice", "carol", "ops", "bank_validator", "system"}
 
-    def __init__(self, replay_cache_size: int = 10000):
-        # In-memory LRU/OrderedDict for nonce replay cache
+    def __init__(self, replay_cache_size: int = 10000, db_path: Optional[str] = None):
         self.seen_nonces: collections.OrderedDict[str, float] = collections.OrderedDict()
         self.max_nonces = replay_cache_size
         self.key_bindings: Dict[str, str] = dict(self.DEFAULT_KEYS)
         self.authorized_verifiers: Set[str] = set(self.AUTHORIZED_VERIFIERS)
+        self.db_path = db_path
+        self._init_persistent_cache()
+
+    def _init_persistent_cache(self):
+        """Initialize persistent sqlite table for nonces if db_path is specified."""
+        if self.db_path:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                with conn:
+                    conn.execute(
+                        "CREATE TABLE IF NOT EXISTS seen_nonces (nonce TEXT PRIMARY KEY, seen_at REAL)"
+                    )
+                conn.close()
+            except Exception:
+                pass
 
     def register_key(self, user: str, key_id: str):
         self.key_bindings[user] = key_id
 
     def is_nonce_seen(self, nonce: str) -> bool:
-        return nonce in self.seen_nonces
+        if nonce in self.seen_nonces:
+            return True
+        if self.db_path:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM seen_nonces WHERE nonce = ?", (nonce,))
+                row = cursor.fetchone()
+                conn.close()
+                if row:
+                    self.seen_nonces[nonce] = time.time()
+                    return True
+            except Exception:
+                pass
+        return False
 
     def record_nonce(self, nonce: str):
         if len(self.seen_nonces) >= self.max_nonces:
             self.seen_nonces.popitem(last=False)
-        self.seen_nonces[nonce] = time.time()
+        seen_at = time.time()
+        self.seen_nonces[nonce] = seen_at
+        if self.db_path:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                with conn:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO seen_nonces (nonce, seen_at) VALUES (?, ?)",
+                        (nonce, seen_at)
+                    )
+                conn.close()
+            except Exception:
+                pass
 
     def clear_replay_cache(self):
         self.seen_nonces.clear()
+        if self.db_path:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                with conn:
+                    conn.execute("DELETE FROM seen_nonces")
+                conn.close()
+            except Exception:
+                pass
 
     def classify(
         self,
@@ -66,11 +118,11 @@ class QstdfClassifier:
         verify_result: VerifyResult,
         claimed_signer: Optional[str] = None,
         verifier_id: str = "bob",
-        pqc_unprotect_success: bool = True,
-        channel_tampered: bool = False
+        pqc_unprotect_success: bool = True
     ) -> ThreatClassification:
         """
-        Evaluate signature verification against the strict 6-stage Q-STDF decision ladder.
+        Evaluate signature verification against the strict blind Q-STDF decision ladder.
+        All verdicts are derived from physical, cryptographic, and registry evidence.
         """
         p0 = verify_result.p0
         n = verify_result.n_checks
@@ -96,13 +148,28 @@ class QstdfClassifier:
             )
 
         # -------------------------------------------------------------
-        # STEP 2: IMPERSONATION (Signer Key ID Binding & Hardware Origin Check)
+        # STEP 2: IMPERSONATION (Signer Key ID Binding & Entanglement Session Origin)
         # -------------------------------------------------------------
         from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
-        actual_signer = bundle.measurement_transcript.get("actual_signer")
-        is_transcript_impersonation = (bundle.measurement_transcript.get("attack") == "impersonation") or (actual_signer and actual_signer != bundle.key_id)
 
-        if is_transcript_impersonation:
+        # Check session-origin binding if session exists on Bob's side
+        session = GLOBAL_ENTANGLEMENT_STORE.get_session(bundle.nonce)
+        if session and session.key_id != bundle.key_id:
+            return ThreatClassification(
+                label=ThreatLabel.IMPERSONATION,
+                passed=False,
+                reason=f"Impersonation attack detected: Physical entanglement session belonged to '{session.key_id}', but bundle claimed '{bundle.key_id}'.",
+                mismatch_rate=mismatch_rate,
+                tau=tau,
+                p0=p0,
+                n=n,
+                delta=delta,
+                stage_s_recommendation=StageS.S2,
+                details={"claimed_signer": claimed_signer, "claimed_key": bundle.key_id, "session_key": session.key_id, "step": 2}
+            )
+
+        actual_signer = bundle.measurement_transcript.get("actual_signer")
+        if actual_signer and actual_signer != bundle.key_id:
             return ThreatClassification(
                 label=ThreatLabel.IMPERSONATION,
                 passed=False,
@@ -167,11 +234,11 @@ class QstdfClassifier:
             )
 
         # -------------------------------------------------------------
-        # STEP 4: CHANNEL & PARAMETER TAMPERING (Integrity Check)
+        # STEP 4: PARAMETER TAMPERING (Downgrade & Array Truncation Check)
         # -------------------------------------------------------------
         if bundle.n_checks < 32 or len(bundle.bases) < bundle.n_checks or len(bundle.correction_bits) < bundle.n_checks:
             return ThreatClassification(
-                label=ThreatLabel.CHANNEL,
+                label=ThreatLabel.PARAM_TAMPER,
                 passed=False,
                 reason=f"Security parameter downgrade / array length tampering detected (n_checks={bundle.n_checks} < 32).",
                 mismatch_rate=1.0,
@@ -183,22 +250,25 @@ class QstdfClassifier:
                 details={"n_checks": bundle.n_checks, "step": 4, "param_tampering": True}
             )
 
-        if not pqc_unprotect_success or channel_tampered:
+        # -------------------------------------------------------------
+        # STEP 5: CHANNEL INTEGRITY (PQC Authentication & Syndrome Integrity)
+        # -------------------------------------------------------------
+        if not pqc_unprotect_success:
             return ThreatClassification(
                 label=ThreatLabel.CHANNEL,
                 passed=False,
-                reason="PQC correction bits decryption failure or active quantum channel tampering detected.",
+                reason="PQC correction bits decryption/tag verification failure. Active classical or quantum channel tampering detected.",
                 mismatch_rate=mismatch_rate,
                 tau=tau,
                 p0=p0,
                 n=n,
                 delta=delta,
                 stage_s_recommendation=StageS.S4,
-                details={"pqc_unprotect_success": pqc_unprotect_success, "channel_tampered": channel_tampered, "step": 4}
+                details={"pqc_unprotect_success": pqc_unprotect_success, "step": 5}
             )
 
         # -------------------------------------------------------------
-        # STEP 5: FORGERY (Hoeffding Statistical Threshold Check)
+        # STEP 6: FORGERY (Hoeffding Statistical Threshold Check)
         # -------------------------------------------------------------
         if mismatch_rate > tau:
             return ThreatClassification(
@@ -211,11 +281,11 @@ class QstdfClassifier:
                 n=n,
                 delta=delta,
                 stage_s_recommendation=StageS.S2,
-                details={"mismatch_rate": mismatch_rate, "tau": tau, "step": 5}
+                details={"mismatch_rate": mismatch_rate, "tau": tau, "step": 6}
             )
 
         # -------------------------------------------------------------
-        # STEP 6: OK (All Checks Passed)
+        # STEP 7: OK (All Checks Passed)
         # -------------------------------------------------------------
         # Record valid nonce to prevent subsequent replay attacks
         self.record_nonce(bundle.nonce)
@@ -230,5 +300,5 @@ class QstdfClassifier:
             n=n,
             delta=delta,
             stage_s_recommendation=StageS.S0,
-            details={"mismatch_rate": mismatch_rate, "tau": tau, "step": 6}
+            details={"mismatch_rate": mismatch_rate, "tau": tau, "step": 7}
         )

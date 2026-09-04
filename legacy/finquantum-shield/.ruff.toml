@@ -1,7 +1,0 @@
-line-length = 200
-target-version = "py310"
-
-[lint]
-ignore = ["E", "W", "F"]  # Ignore all linting errors
-
-exclude = [".git", "__pycache__", "build", "dist", "agents"]

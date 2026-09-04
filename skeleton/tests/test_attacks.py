@@ -116,7 +116,7 @@ def test_parameter_tampering_downgrade_attack_vector():
         claimed_signer="alice"
     )
     assert classification.passed is False
-    assert classification.label == ThreatLabel.CHANNEL
+    assert classification.label == ThreatLabel.PARAM_TAMPER
     assert classification.stage_s_recommendation == StageS.S4
 
     # Also test via full pipeline execution
@@ -129,5 +129,44 @@ def test_parameter_tampering_downgrade_attack_vector():
     )
     pipeline_res = pipeline.execute_transfer(req)
     assert pipeline_res.success is False
-    assert pipeline_res.threat_classification.label == ThreatLabel.CHANNEL
+    assert pipeline_res.threat_classification.label == ThreatLabel.PARAM_TAMPER
     assert pipeline_res.stage_s >= StageS.S2
+
+
+def test_payload_tamper_after_sign_rejected():
+    """
+    Test that modifying transaction payload amount after signing causes
+    mismatch rate p_hat to jump to ~0.50 and leads to immediate blind rejection as FORGERY.
+    Zero cooperation or self-labeling from attacker.
+    """
+    import hashlib
+    from shorlynot_skeleton.qds.protocol import QdsT1Protocol
+    from shorlynot_skeleton.detect.classifier import QstdfClassifier
+
+    protocol = QdsT1Protocol()
+    classifier = QstdfClassifier()
+
+    # Alice honestly signs a transfer for Rs 5,000
+    tx_original = TransactionPayload(from_user="alice", to_user="bob", amount=5000.0, tx_id="tx-honest-5k")
+    hash_original = hashlib.sha256(tx_original.canonical_json().encode("utf-8")).hexdigest()
+    bundle = protocol.sign(payload_hash=hash_original, key_id="alice-key-1")
+
+    # Attacker tampers with amount (5,000 -> 500,000)
+    tx_tampered = TransactionPayload(from_user="alice", to_user="bob", amount=500000.0, tx_id="tx-honest-5k")
+    hash_tampered = hashlib.sha256(tx_tampered.canonical_json().encode("utf-8")).hexdigest()
+    tampered_bundle = bundle.model_copy(update={"payload_hash": hash_tampered})
+
+    # Verifier verifies tampered bundle against expected payload hash
+    verify_res = protocol.verify(tampered_bundle, verifier_id="bob")
+    assert verify_res.candidate_accepted is False
+    # Empirical mismatch rate jumps around 0.50 (uncorrelated basis states) >> tau ~0.2097
+    assert verify_res.mismatch_rate > verify_res.tau
+
+    classification = classifier.classify(
+        bundle=tampered_bundle,
+        verify_result=verify_res,
+        claimed_signer="alice",
+        verifier_id="bob"
+    )
+    assert classification.passed is False
+    assert classification.label == ThreatLabel.FORGERY

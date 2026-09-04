@@ -74,12 +74,17 @@ def test_qstdf_decision_ladder_order():
     res = classifier.classify(bundle, vr_pass, claimed_signer="alice", verifier_id="bob")
     assert res.label == ThreatLabel.REPLAY
 
-    # 5. Test CHANNEL (Step 4)
-    bundle_new = bundle.model_copy(update={"nonce": "test-nonce-2"})
+    # 5. Test PARAM_TAMPER (Step 4)
+    bundle_downgraded = bundle.model_copy(update={"nonce": "test-nonce-2", "n_checks": 1})
+    res_param = classifier.classify(bundle_downgraded, vr_pass, claimed_signer="alice", verifier_id="bob")
+    assert res_param.label == ThreatLabel.PARAM_TAMPER
+
+    # 6. Test CHANNEL (Step 5)
+    bundle_new = bundle.model_copy(update={"nonce": "test-nonce-3"})
     res = classifier.classify(bundle_new, vr_pass, claimed_signer="alice", verifier_id="bob", pqc_unprotect_success=False)
     assert res.label == ThreatLabel.CHANNEL
 
-    # 6. Test FORGERY (Step 5)
+    # 7. Test FORGERY (Step 6)
     vr_fail = VerifyResult(
         candidate_accepted=False,
         mismatch_rate=0.45,
@@ -87,6 +92,6 @@ def test_qstdf_decision_ladder_order():
         n_checks=64,
         tau=0.2097
     )
-    bundle_new2 = bundle.model_copy(update={"nonce": "test-nonce-3"})
+    bundle_new2 = bundle.model_copy(update={"nonce": "test-nonce-4"})
     res = classifier.classify(bundle_new2, vr_fail, claimed_signer="alice", verifier_id="bob")
     assert res.label == ThreatLabel.FORGERY

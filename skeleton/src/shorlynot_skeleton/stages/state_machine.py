@@ -38,6 +38,8 @@ class StageStateMachine:
         self.event_limit = event_history_limit
         self.events: collections.deque = collections.deque(maxlen=event_history_limit)
         self.consecutive_threats: int = 0
+        self.quarantined_accounts: set = set()
+        self.lock_scope: str = "none"
 
     def get_state(self) -> StageState:
         tau = TauCalculator.get_preset_tau(self.preset)
@@ -60,6 +62,8 @@ class StageStateMachine:
             backend=self.backend,
             active_transfers_allowed=transfers_allowed,
             bank_locked=bank_locked,
+            lock_scope=self.lock_scope,
+            quarantined_accounts=sorted(list(self.quarantined_accounts)),
             events_count=len(self.events)
         )
 
@@ -96,10 +100,10 @@ class StageStateMachine:
         details: str = ""
     ) -> StageS:
         """
-        Escalate S-stage based on threat label and progressive attack history.
-        - Single Forgery/Impersonation: S2 (transfers suspended)
+        Escalate S-stage based on threat label, actor, and progressive attack history.
+        - Single Forgery/Impersonation: S2 (transfers suspended for actor / system)
         - Repeated Attack under S2: Escalates to S3 (read-only) -> S4 (full lockdown)
-        - Channel tampering / Severe QBER: S4 immediately
+        - Channel tampering / Parameter downgrade / Severe QBER: S4 immediately
         """
         self.last_threat = label
         self.last_mismatch = mismatch_rate
@@ -110,28 +114,37 @@ class StageStateMachine:
             self.consecutive_threats = 0
             if self.stage_s == StageS.S1:
                 new_stage = StageS.S0
+                self.lock_scope = "none"
         else:
             self.consecutive_threats += 1
+            if actor:
+                self.quarantined_accounts.add(actor)
 
-            if label == ThreatLabel.CHANNEL:
-                # Critical channel compromise -> immediate full bank lockdown
+            if label in (ThreatLabel.CHANNEL, ThreatLabel.PARAM_TAMPER):
+                # Critical channel or protocol downgrade compromise -> immediate full bank lockdown
                 new_stage = StageS.S4
+                self.lock_scope = "global"
             elif label in (ThreatLabel.REPLAY, ThreatLabel.UNAUTH_VERIFY):
                 # Pattern attack / unauthorized entity
                 if self.stage_s.value < StageS.S3.value:
                     new_stage = StageS.S3
+                    self.lock_scope = "account" if self.consecutive_threats == 1 else "global"
                 elif self.consecutive_threats >= 2:
                     new_stage = StageS.S4
+                    self.lock_scope = "global"
             elif label in (ThreatLabel.FORGERY, ThreatLabel.IMPERSONATION):
                 # Initial signature violation -> S2
                 if self.stage_s.value < StageS.S2.value:
                     new_stage = StageS.S2
+                    self.lock_scope = "account"
                 elif self.stage_s == StageS.S2:
                     # Repeated forgery attack while already under S2 alert -> escalate to S3
                     new_stage = StageS.S3
+                    self.lock_scope = "global"
                 elif self.stage_s == StageS.S3 or self.consecutive_threats >= 3:
                     # Persistent attack wave -> escalate to S4 lockdown
                     new_stage = StageS.S4
+                    self.lock_scope = "global"
 
         self.stage_s = new_stage
 
@@ -160,6 +173,8 @@ class StageStateMachine:
         self.last_threat = ThreatLabel.OK
         self.last_mismatch = 0.0
         self.consecutive_threats = 0
+        self.quarantined_accounts.clear()
+        self.lock_scope = "none"
 
         event = StageEvent(
             id=str(uuid.uuid4())[:8],

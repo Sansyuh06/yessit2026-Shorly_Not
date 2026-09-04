@@ -14,6 +14,7 @@ import numpy as np
 from shorlynot_skeleton.models import SignatureBundle, VerifyResult, QuantumBackend, QuantumEngine
 from shorlynot_skeleton.qds.encoding import PauliEncoding
 from shorlynot_skeleton.engines.qiskit_aer import QiskitAerEngine
+from shorlynot_skeleton.qds.sessions import GLOBAL_ENTANGLEMENT_STORE
 
 
 MIN_SECURE_N: int = 32
@@ -88,6 +89,18 @@ class QdsT1Protocol:
                 "bob_bit": result["bob_bit"]
             })
 
+        # 5. Record Bob-side entanglement ground truth in the session store
+        # With real hardware, Bob's Bell-half is the ground truth; the store simulates Bob's side.
+        GLOBAL_ENTANGLEMENT_STORE.record_session(
+            nonce=tx_nonce,
+            key_id=key_id,
+            alice_bell_measurements=[list(s) for s in syndromes],
+            bases=bases,
+            payload_hash=payload_hash,
+            n_checks=effective_n,
+            L=effective_L
+        )
+
         t_end = time.perf_counter()
 
         telemetry = {
@@ -97,7 +110,6 @@ class QdsT1Protocol:
             "state_preparation": "Pauli-Eigenstates",
             "circuit_backend": "qiskit_aer",
             "real_circuits": True,
-            "alice_bell_measurements": [list(s) for s in syndromes],
             "circuit_verification_results": circuit_results
         }
 
@@ -200,8 +212,12 @@ class QdsT1Protocol:
         bases = bundle.bases[:n]
         provided_syndromes = override_syndromes if override_syndromes is not None else bundle.correction_bits[:n]
 
-        # 2. Retrieve actual physical Bell measurement outcomes on shared pairs
-        alice_measurements = bundle.measurement_transcript.get("alice_bell_measurements")
+        # 2. Retrieve actual physical Bell measurement outcomes from Bob-side session store
+        # With real hardware, Bob's Bell-half is the ground truth; the store simulates Bob's side.
+        session = GLOBAL_ENTANGLEMENT_STORE.get_session(bundle.nonce)
+        alice_measurements = None
+        if session and session.key_id == bundle.key_id and session.payload_hash == bundle.payload_hash:
+            alice_measurements = session.alice_bell_measurements
 
         engine = QiskitAerEngine(p0=noise_floor)
         mismatches = 0

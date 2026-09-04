@@ -17,6 +17,7 @@ class ThreatLabel(str, Enum):
     IMPERSONATION = "IMPERSONATION"
     REPLAY = "REPLAY"
     CHANNEL = "CHANNEL"
+    PARAM_TAMPER = "PARAM_TAMPER"
     FORGERY = "FORGERY"
     OK = "OK"
 
@@ -199,6 +200,8 @@ class StageState(BaseModel):
     backend: QuantumBackend = QuantumBackend.SIM
     active_transfers_allowed: bool = True
     bank_locked: bool = False
+    lock_scope: str = "none"  # none | account | global
+    quarantined_accounts: List[str] = Field(default_factory=list)
     events_count: int = 0
 
 

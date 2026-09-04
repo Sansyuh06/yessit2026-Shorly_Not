@@ -31,12 +31,12 @@
 | Architectural Layer | Implementation Truth | Scientific & Engineering Rationale |
 |---|---|---|
 | **Sign Path** | **Qiskit Aer Circuits (Classical Sim of Quantum Circuits)** | Alice executes 3-qubit Bell teleportation circuits on `AerSimulator` (classical simulation of quantum state transformations) to generate syndromes $(m_1, m_2)$. |
-| **Verify Path** | **$\mathcal{O}(n)$ Analytical/Statevector Evaluation (Dual-Mode)** | Bob evaluates syndrome consistency via analytical Born-rule statevector projection under depolarizing noise $p_0$ for sub-millisecond edge throughput; full Aer circuit verification mode is also selectable (`mode="circuit"`). |
-| **Detection Engine** | **Strict Zero-ML Hoeffding Bounds (Q-STDF)** | Non-ML threshold calculation $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$; asserted with test confirming 0 ML libraries in `sys.modules`. |
-| **QKD Layer** | **Classical Protocol Simulation (Support)** | Statistical simulation of BB84 session key exchange (256-bit symmetric keys) and channel QBER monitoring ($Q_0 \to Q_4$). |
-| **PQC Layer** | **AES-256-GCM Demo Wrap (ML-KEM = Interface Only)** | Authenticated symmetric encryption wrapping classical correction bits; `MlKem768Interface` is an interface/stub for future NIST FIPS 203 wire-up. |
+| **Verify Path** | **$\mathcal{O}(n)$ Analytical/Statevector Evaluation (Dual-Mode)** | Bob evaluates syndrome consistency via analytical Born-rule statevector projection against Bob's recorded entanglement ground truth (`sessions.py`) under depolarizing noise $p_0$ for sub-millisecond edge throughput; full Aer circuit verification mode is also selectable (`mode="circuit"`). |
+| **Detection Engine** | **Strict Zero-ML Hoeffding Bounds (Q-STDF - Zero Oracles)** | Non-ML threshold calculation $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$; blind evidence-based classification without transcript flags or injected booleans. Asserted with test confirming 0 ML libraries in `sys.modules`. |
+| **QKD Layer** | **Classical Protocol Simulation (Support)** | Statistical simulation of BB84 session key exchange (256-bit symmetric keys) with physical Eve interception and channel QBER monitoring ($Q_0 \to Q_4$). |
+| **PQC Layer** | **AES-256-GCM + ML-KEM Reference Adapter** | Authenticated symmetric encryption wrapping classical correction bits; `MlKem768Interface` provides deterministic post-quantum KEM agreement adhering to NIST FIPS 203. |
 | **Hardware Backend** | **Qiskit Aer Default, Real IBM Optional** | Defaults to `sim` (Aer classical circuit simulation); switches to real IBM QPUs only when `IBM_QUANTUM_TOKEN` is provided. Aer is never claimed to be physical quantum hardware. |
-| **Bank Enforcement** | **Application-Level Bank Stages S0–S4** | Security stages $S_0 \to S_4$ act strictly at the application gateway (refusing transfers, revoking sessions, locking accounts); no unsafe OS-level `iptables` or root firewall hooks. |
+| **Bank Enforcement** | **Application-Level Bank Stages S0–S4 & Account Quarantine** | Security stages $S_0 \to S_4$ act strictly at the application gateway (refusing transfers, quarantining affected accounts, locking bank on sustained waves); no unsafe OS-level `iptables` or root firewall hooks. |
 
 ---
 
@@ -44,17 +44,17 @@
 
 **ShorlyNot** is a quantum-inspired protocol simulation framework and financial application proof-of-concept created for SIH 2026 Problem Statement 26141:
 1. **`skeleton/`** (The Core Simulation Framework): An embeddable security SDK and REST API delivering simulated **ShorlyNot-QDS-T1** (teleportation-assisted Quantum Digital Signatures on Qiskit Aer) and **Q-STDF** (Quantum Statistical Threat Detection Framework) using rigorous Hoeffding statistical bounds instead of black-box ML.
-2. **`bank/`** (The Operational Proof): A realistic mock banking application where every transaction is simulated quantum-signed and verified. Signature attacks (forgery, impersonation, replay, unauthorized verification, channel tampering, parameter downgrade) are flagged in real-time by statistical bounds, driving application-level lockouts (S0–S4).
+2. **`bank/`** (The Operational Proof): A realistic mock banking application where every transaction is simulated quantum-signed and verified. Signature attacks (forgery, impersonation, replay, unauthorized verification, channel tampering, parameter downgrade, payload modification) are flagged in real-time by statistical bounds, driving application-level lockouts (S0–S4).
 
 ---
 
 ## Key Highlights
 
-- **Named Protocol**: `ShorlyNot-QDS-T1` — Pauli eigenstate encoding ($Z, X$), Bell-pair entanglement distribution ($|\Phi^+\rangle$), Bell measurement syndrome extraction, and Pauli unitary corrections ($I, X, Z, XZ$).
-- **Zero-ML Statistical Threat Detection (Q-STDF)**: Hoeffding threshold calculation $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$ with rigorous false-reject budgeting.
-- **Five Attack Simulations**: Deterministically detects Forgery, Impersonation, Nonce Replay, Unauthorized Verification, and Channel Tampering.
-- **App-Level Lockdown**: Stages $S_0$ through $S_4$ directly regulate banking operations without unsafe OS-level dependencies.
-- **Quantum Backends**: Defaults to high-efficiency local simulation (`sim` via Qiskit Aer with noise modeling); optional real `ibm` quantum processors only when an explicit IBM Quantum token and remote job are configured. Aer is a classical simulator, not physical quantum hardware.
+- **Named Protocol**: `ShorlyNot-QDS-T1` — Pauli eigenstate encoding ($Z, X$), Bell-pair entanglement distribution ($|\Phi^+\rangle$), Bob-side session ground truth, Bell measurement syndrome extraction, and Pauli unitary corrections ($I, X, Z, XZ$).
+- **Zero-ML Statistical Threat Detection (Q-STDF)**: Hoeffding threshold calculation $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$ with rigorous false-reject budgeting and blind evidence-based classification.
+- **Seven Threat Vectors**: Deterministically detects Forgery, Impersonation, Nonce Replay, Unauthorized Verification, Channel Tampering, Parameter Downgrade, and Payload Tampering.
+- **App-Level Lockdown & Account Quarantine**: Stages $S_0$ through $S_4$ directly regulate banking operations without unsafe OS-level dependencies.
+- **Quantum Backends**: Defaults to high-efficiency local simulation (`sim` via Qiskit Aer with noise modeling); optional real `ibm` quantum processors only when an explicit IBM Quantum token and remote job are configured.
 
 ---
 
@@ -62,8 +62,7 @@
 
 ```
 .
-├── docs/                # PRD, mathematical models, architecture, and benchmarks
-│   ├── ONE_SHOT_PRD.md  # Source of truth build specification
+├── docs/                # Mathematical models, architecture, benchmarks, security analysis
 │   ├── MODEL.md         # Normative mathematical model & formulas
 │   ├── ARCHITECTURE.md  # System architecture & dataflow
 │   ├── BENCHMARKS.md    # Monte Carlo metrics & latency curves
@@ -72,14 +71,14 @@
 │   └── DEPLOY.md        # Demo script & deployment manual
 ├── skeleton/            # The Core Quantum Framework & Microservice
 │   ├── src/shorlynot_skeleton/
-│   │   ├── qds/         # ShorlyNot-QDS-T1 Bell teleportation & Pauli verification
+│   │   ├── qds/         # ShorlyNot-QDS-T1 Bell teleportation, sessions & Pauli verification
 │   │   ├── detect/      # Q-STDF non-ML threshold engine (tau.py & classifier.py)
 │   │   ├── stages/      # S0-S4 (signature) and Q0-Q4 (QKD) stage state machine
 │   │   ├── qkd/         # BB84 session key exchange & QBER monitoring
 │   │   ├── pqc/         # AES-256-GCM / ML-KEM classical syndrome encapsulation
-│   │   ├── attacks/     # 5 executable attack vectors
+│   │   ├── attacks/     # Executable attack vectors
+│   │   ├── engines/     # Qiskit Aer & PennyLane circuit simulation engines
 │   │   ├── backends/    # Sim (Aer) and IBM Quantum Runtime
-│   │   ├── analysis/    # Monte Carlo P_forge & latency benchmarks
 │   │   ├── api/         # FastAPI REST service (:8000)
 │   │   └── pipeline.py  # Atomic transfer pipeline
 │   └── tests/           # Unit & integration tests
@@ -87,8 +86,7 @@
 │   ├── app/             # Web routes, auth, ledger, and skeleton client
 │   ├── static/          # Custom styling & SOC live feed scripts
 │   └── tests/           # Bank application tests
-├── scripts/             # Startup scripts (run_demo.bat, run_demo.sh)
-└── legacy/              # Archived research and historical prototypes
+└── scripts/             # Scoreboard (scoreboard.py), demo launcher, smoke checks
 ```
 
 ---
@@ -106,11 +104,9 @@ chmod +x ./scripts/run_demo.sh
 ./scripts/run_demo.sh
 ```
 
-### 3. One-Shot Automated Attack & Defense Suite
+### 3. Automated Scoreboard & Metrics
 ```bash
-./scripts/demo_attacks.sh
-# or on Windows:
-python scripts/demo_attacks.py
+python scripts/scoreboard.py
 ```
 
 - **Bank Web Application**: [http://127.0.0.1:8080](http://127.0.0.1:8080) (Log in with `alice` / `alice123`)

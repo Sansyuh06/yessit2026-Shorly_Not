@@ -1,9 +1,0 @@
-[project]
-name = "finquantum-shield"
-version = "1.0.0"
-description = "QKD Simulator with Eavesdropper Detection — QT-3.5"
-requires-python = ">=3.10"
-license = {text = "MIT"}
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

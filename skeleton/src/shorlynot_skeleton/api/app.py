@@ -4,6 +4,7 @@ SIH 2026 PS 26141 — REST API (:8000).
 Normative specification from PRD §7 and Part C4.
 """
 
+import collections
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException, status, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +27,7 @@ from shorlynot_skeleton.pipeline import QuantumTransferPipeline
 from shorlynot_skeleton.qds.protocol import QdsT1Protocol
 from shorlynot_skeleton.backends.sim import SimBackend, IBMBackend
 from shorlynot_skeleton.detect.tau import TauCalculator
+from shorlynot_skeleton.qds.sessions import GLOBAL_ENTANGLEMENT_STORE
 
 
 app = FastAPI(
@@ -34,9 +36,20 @@ app = FastAPI(
     description="Teleportation-Based Quantum Digital Signatures (ShorlyNot-QDS-T1) and Non-ML Threat Detection (Q-STDF)"
 )
 
+ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +59,16 @@ app.add_middleware(
 pipeline = QuantumTransferPipeline()
 sim_backend = SimBackend()
 ibm_backend = IBMBackend()
+
+# Live metrics telemetry storage
+_METRICS_TELEMETRY: Dict[str, Any] = {
+    "sign_times_ms": collections.deque(maxlen=500),
+    "verify_times_ms": collections.deque(maxlen=500),
+    "honest_accepted": 0,
+    "honest_total": 0,
+    "forgery_accepted": 0,
+    "forgery_total": 0,
+}
 
 
 class SignRequest(BaseModel):
@@ -127,6 +150,8 @@ def sign_payload(req: SignRequest) -> SignatureBundle:
         L=req.L,
         backend=req.backend
     )
+    if "sign_latency_ms" in bundle.measurement_transcript:
+        _METRICS_TELEMETRY["sign_times_ms"].append(bundle.measurement_transcript["sign_latency_ms"])
     return bundle
 
 
@@ -142,6 +167,7 @@ def verify_signature(req: VerifyRequest) -> Dict[str, Any]:
         verifier_id=req.verifier_id,
         delta=delta
     )
+    _METRICS_TELEMETRY["verify_times_ms"].append(v_res.verification_time_ms)
 
     # Classify threat
     classification = pipeline.classifier.classify(
@@ -174,6 +200,18 @@ def verify_signature(req: VerifyRequest) -> Dict[str, Any]:
 def execute_transfer_pipeline(req: TransferPipelineRequest) -> PipelineResult:
     """Execute end-to-end quantum transfer pipeline."""
     result = pipeline.execute_transfer(req)
+    if result.signature_bundle and "sign_latency_ms" in result.signature_bundle.measurement_transcript:
+        _METRICS_TELEMETRY["sign_times_ms"].append(result.signature_bundle.measurement_transcript["sign_latency_ms"])
+    if result.verify_result:
+        _METRICS_TELEMETRY["verify_times_ms"].append(result.verify_result.verification_time_ms)
+    if req.simulate_attack == "forgery":
+        _METRICS_TELEMETRY["forgery_total"] += 1
+        if result.success:
+            _METRICS_TELEMETRY["forgery_accepted"] += 1
+    elif req.simulate_attack is None:
+        _METRICS_TELEMETRY["honest_total"] += 1
+        if result.success:
+            _METRICS_TELEMETRY["honest_accepted"] += 1
     return result
 
 
@@ -200,7 +238,7 @@ def trigger_attack(attack_type: str, req: Optional[AttackTriggerRequest] = None)
         tau_preset=TauPreset.NORMAL,
         simulate_attack=attack_type
     )
-    return pipeline.execute_transfer(pipe_req)
+    return execute_transfer_pipeline(pipe_req)
 
 
 @app.get("/v1/stages", response_model=StageState)
@@ -220,6 +258,7 @@ def reset_stages() -> Dict[str, Any]:
     """Reset security stages to normal baseline (S0, Q0)."""
     pipeline.stage_machine.reset()
     pipeline.classifier.clear_replay_cache()
+    GLOBAL_ENTANGLEMENT_STORE.clear()
     return {
         "status": "success",
         "message": "Security stages reset to normal operational baseline (S0, Q0). Replay cache purged.",
@@ -229,19 +268,28 @@ def reset_stages() -> Dict[str, Any]:
 
 @app.get("/v1/metrics", response_model=MetricSummary)
 def get_metrics() -> MetricSummary:
-    """Get performance and security metric summary."""
+    """Get performance and security metric summary computed from real recorded runs."""
     p_forge = TauCalculator.calculate_theoretical_p_forge(tau=0.2097, n=64)
+    sign_times = list(_METRICS_TELEMETRY["sign_times_ms"])
+    verify_times = list(_METRICS_TELEMETRY["verify_times_ms"])
+    avg_sign = round(float(sum(sign_times) / len(sign_times)), 3) if sign_times else 0.0
+    avg_verify = round(float(sum(verify_times) / len(verify_times)), 3) if verify_times else 0.0
+    honest_total = _METRICS_TELEMETRY["honest_total"]
+    honest_rate = round(float(_METRICS_TELEMETRY["honest_accepted"] / honest_total), 4) if honest_total > 0 else 1.0
+    forgery_total = _METRICS_TELEMETRY["forgery_total"]
+    forgery_rate = round(float(_METRICS_TELEMETRY["forgery_accepted"] / forgery_total), 4) if forgery_total > 0 else 0.0
+
     return MetricSummary(
         protocol=__protocol__,
         backend="sim",
-        total_signatures=len(pipeline.stage_machine.events),
-        total_verifications=len(pipeline.stage_machine.events),
+        total_signatures=len(sign_times),
+        total_verifications=len(verify_times),
         threats_detected=sum(1 for e in pipeline.stage_machine.events if e.threat_label != ThreatLabel.OK),
-        honest_accept_rate=0.995,
-        random_forgery_accept_rate=0.0,
+        honest_accept_rate=honest_rate,
+        random_forgery_accept_rate=forgery_rate,
         theoretical_p_forge=p_forge,
-        avg_sign_time_ms=0.45,
-        avg_verify_time_ms=0.65,
+        avg_sign_time_ms=avg_sign,
+        avg_verify_time_ms=avg_verify,
         tau_normal=0.2097,
         tau_strict=0.2523,
         tau_lenient=0.1730,
@@ -296,6 +344,13 @@ def admin_reseed() -> Dict[str, Any]:
     """Reseed demo state, stages, and replay cache."""
     pipeline.stage_machine.reset()
     pipeline.classifier.clear_replay_cache()
+    GLOBAL_ENTANGLEMENT_STORE.clear()
+    _METRICS_TELEMETRY["sign_times_ms"].clear()
+    _METRICS_TELEMETRY["verify_times_ms"].clear()
+    _METRICS_TELEMETRY["honest_accepted"] = 0
+    _METRICS_TELEMETRY["honest_total"] = 0
+    _METRICS_TELEMETRY["forgery_accepted"] = 0
+    _METRICS_TELEMETRY["forgery_total"] = 0
     return {
         "status": "success",
         "message": "Demo state successfully reseeded."

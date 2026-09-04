@@ -61,13 +61,9 @@ class QuantumTransferPipeline:
         payload_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
         # Step 1: QKD Session Negotiation
-        qkd_result = self.qkd.negotiate_session()
-        if request.simulate_attack == "channel":
-            # Channel attack injects elevated eavesdropping QBER on the quantum link (15% QBER -> Stage Q3)
-            qkd_result.qber = 0.15
-            self.stage_machine.update_qber(0.15)
-        else:
-            self.stage_machine.update_qber(qkd_result.qber)
+        inject_eve = (request.simulate_attack == "channel")
+        qkd_result = self.qkd.negotiate_session(inject_eavesdropper=inject_eve)
+        self.stage_machine.update_qber(qkd_result.qber)
         stage_q = self.stage_machine.stage_q
 
         # Check if active transfers allowed under current stage S
@@ -119,8 +115,8 @@ class QuantumTransferPipeline:
 
         # Handle Attack Injections for Live Demonstrations
         verifier_id = request.verifier_id
-        pqc_success = True
-        channel_tampered = False
+        if request.simulate_attack == "unauth_verify" and verifier_id in ("bob", "alice", "carol", "ops", "bank_validator", "system"):
+            verifier_id = UnauthVerifyAttack.get_unauthorized_verifier_id()
 
         if request.simulate_attack == "forgery":
             bundle = ForgeryAttack.generate_forged_bundle(payload_hash=payload_hash, claimed_key_id=signer_key)
@@ -134,12 +130,9 @@ class QuantumTransferPipeline:
         elif request.simulate_attack == "replay":
             # Replay by pre-registering nonce
             self.classifier.record_nonce(bundle.nonce)
-        elif request.simulate_attack == "unauth_verify":
-            verifier_id = UnauthVerifyAttack.get_unauthorized_verifier_id()
         elif request.simulate_attack == "channel":
             bundle = ChannelTamperingAttack.tamper_correction_bits(bundle)
             bundle = ChannelTamperingAttack.corrupt_pqc_ciphertext(bundle)
-            channel_tampered = True
         elif request.simulate_attack in ("param_tamper", "param_downgrade"):
             from shorlynot_skeleton.attacks.param_tamper import ParameterTamperingAttack
             bundle = ParameterTamperingAttack.generate_downgraded_bundle(
@@ -148,15 +141,18 @@ class QuantumTransferPipeline:
                 tampered_n=1
             )
 
-        # Step 4: PQC Unwrap & Verification
+        # Step 4: PQC Unwrap & Verification (Pure evidence, zero oracles)
+        pqc_success = True
+        unwrapped_bits = bundle.correction_bits
         if bundle.protected_corrections:
-            pqc_success, unwrapped_bits = CorrectionBitProtector.unprotect(
+            pqc_success, unwrapped = CorrectionBitProtector.unprotect(
                 bundle.protected_corrections,
                 qkd_result.session_key
             )
-        else:
-            pqc_success = (request.simulate_attack != "channel")
-            unwrapped_bits = bundle.correction_bits
+            if pqc_success and unwrapped is not None:
+                unwrapped_bits = unwrapped
+            else:
+                pqc_success = False
 
         # Step 5: QDS-T1 Projective Verification
         delta_budget = TauCalculator.PRESETS[request.tau_preset]["delta"]
@@ -173,8 +169,7 @@ class QuantumTransferPipeline:
             verify_result=verify_result,
             claimed_signer=claimed_signer,
             verifier_id=verifier_id,
-            pqc_unprotect_success=pqc_success,
-            channel_tampered=channel_tampered
+            pqc_unprotect_success=pqc_success
         )
 
         # Step 7: Update Security Stage State Machine

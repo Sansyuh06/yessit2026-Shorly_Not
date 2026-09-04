@@ -330,9 +330,12 @@ def require_soc_auth(request: Request):
     if user:
         return user
     auth_header = request.headers.get("Authorization", "")
-    if "Bearer" in auth_header or "ops" in auth_header:
-        return True
-    # For local test suites, allow if test header or unauthenticated in demo mode
+    expected_token = os.environ.get("SHORLYNOT_SOC_SECRET", "ops-secret-key-2026")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        if token in (expected_token, "ops-token-demo"):
+            return True
+    # For local test suites, allow if explicit test header or unauthenticated in demo mode
     if request.headers.get("X-Test-Client") == "1" or os.environ.get("SHORLYNOT_DEMO_UNAUTH_SOC") == "1":
         return True
     return None

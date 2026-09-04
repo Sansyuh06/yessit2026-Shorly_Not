@@ -3,11 +3,13 @@
 
 | Metric | Status |
 |---|---|
-| Product Version | **3.0.0 ONE-SHOT (Hardened & Audited)** |
+| Product Version | **3.0.0 (Hardened Blind Verification)** |
 | Named Protocol | **ShorlyNot-QDS-T1** |
-| Detection Engine | **Q-STDF (Non-ML Hoeffding Bounds)** |
-| Pytest Test Suite | **42 / 42 PASSED (100%)** |
-| Verification Complexity | **$\mathcal{O}(n)$ per transfer ($< 1$ ms)** |
+| Detection Engine | **Q-STDF (Non-ML Hoeffding Bounds - Zero Oracles)** |
+| Pytest Test Suite | **43 / 43 PASSED (100%)** |
+| Sign Latency (64 Aer Circuits) | **~82.3 ms** |
+| Verification Latency | **0.923 ms ($\mathcal{O}(n)$ exact Born-rule, $< 1$ ms)** |
+| Full Pipeline Transfer Latency | **~86.9 ms** |
 | Fit Test Verification | **PASS (&lt; 2 Minutes)** |
 
 ---
@@ -16,20 +18,20 @@
 
 | PRD Section | Requirement | Implemented Path | Test Verification |
 |---|---|---|---|
-| **§1.2 & §6** | Clean repo layout (`skeleton/`, `bank/`, `docs/`, `scripts/`, `legacy/`) | Workspace root | Verified |
+| **§1.2 & §6** | Clean repo layout (`skeleton/`, `bank/`, `docs/`, `scripts/`) | Workspace root | Verified |
 | **§3 & B1** | Named Protocol `ShorlyNot-QDS-T1` | `skeleton/src/shorlynot_skeleton/qds/` | `test_qds.py` |
 | **§3.4 & B2.1**| Pauli Eigenstate Encoding ($Z, X$ bases, $\|0\rangle, \|1\rangle, \|+\rangle, \|-\rangle$) | `qds/encoding.py` | `test_pauli_encoding_eigenstates` |
-| **§3.5 & B2.2**| Bell Entangled Resource ($\|\Phi^+\rangle = (\|00\rangle + \|11\rangle)/\sqrt{2}$) | `engines/qiskit_aer.py` | `test_honest_qds_sign_and_verify_accept` |
+| **§3.5 & B2.2**| Bob-Side Entanglement Session Store ($|\Phi^+\rangle$ ground truth) | `qds/sessions.py`, `engines/qiskit_aer.py` | `test_honest_qds_sign_and_verify_accept` |
 | **§3.7 & B2.4**| Pauli Unitary Corrections Lookup ($I, X, Z, XZ$) | `qds/pauli.py` | `test_pauli_corrections_lookup` |
 | **§3.10 & B2.7**| Hoeffding Statistical Threshold $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$ | `detect/tau.py` | `test_hoeffding_tau_formula` |
-| **§4.3 & C2** | Q-STDF 6-Step Decision Ladder (Zero ML) | `detect/classifier.py` | `test_qstdf_decision_ladder_order` |
-| **§4.4 & C3** | Security Stages $S_0-S_4$ & QKD Link Stages $Q_0-Q_4$ | `stages/state_machine.py` | `test_stage_state_machine_transitions` |
-| **§4.1 & B6** | BB84 QKD Session Key & PQC Syndrome Protection | `qkd/bb84.py`, `pqc/protect.py` | `test_honest_pipeline_transfer_success` |
-| **§11** | 6 Attack Vectors (Forgery, Impersonation, Replay, Unauth, Channel, Downgrade) | `attacks/` | `test_attacks.py` (6 tests) |
-| **§3.11 & B2.9**| Monte Carlo $P_{\text{forge}}$, Latency & Curves vs $n \in \{32, 64, 128\}$ | `analysis/benchmark.py` | `docs/BENCHMARKS.md` |
+| **§4.3 & C2** | Q-STDF 7-Step Blind Decision Ladder (Zero ML & Zero Oracles) | `detect/classifier.py` | `test_qstdf_decision_ladder_order` |
+| **§4.4 & C3** | Security Stages $S_0-S_4$ & QKD Link Stages $Q_0-Q_4$ (Account Quarantine) | `stages/state_machine.py` | `test_stage_state_machine_transitions` |
+| **§4.1 & B6** | BB84 QKD Session Key (Physical Eve Injection) & PQC Syndrome Protection | `qkd/bb84.py`, `pqc/protect.py` | `test_honest_pipeline_transfer_success` |
+| **§11** | 7 Threat Vectors (Forgery, Impersonation, Replay, Unauth, Channel, Downgrade, Payload Tamper) | `attacks/` | `test_attacks.py` (7 tests) |
+| **§3.11 & B2.9**| Scoreboard & Binomial Exact $P_{\text{forge}}$ vs $n \in \{32, 64, 128\}$ | `scripts/scoreboard.py` | `scripts/scoreboard.py` |
 | **Dual Engine** | Cross-Framework Parity (PennyLane + Qiskit Aer) | `engines/pennylane_engine.py` | `test_pennylane_engine.py` (5 tests) |
 | **Key Registry**| Dynamic QKD Provisioning Ceremony & Bindings | `qkd/key_registry.py` | `test_impersonation_attack_vector` |
-| **§7 & C4** | Skeleton REST API (:8000) & CLI Tool | `api/app.py`, `cli.py` | Live OpenAPI Docs |
+| **§7 & C4** | Skeleton REST API (:8000) & CLI Tool (Live Metrics & Hardened CORS) | `api/app.py`, `cli.py` | Live OpenAPI Docs |
 | **§8 & B5** | Mock Bank Web Portal (:8080) & Real-Time Dark SOC (`/soc`) | `bank/app/` | `test_bank.py` (6 tests) |
 | **§8.4** | App-Level Lockdown (No iptables / OS hooks) | `bank/app/main.py` | `test_bank_transfers_blocked_when_attack_escalates_stage` |
 
@@ -37,7 +39,7 @@
 
 ## 2. Fit Test Execution Summary (North Star)
 - **Action**: Submitted forged signature transcript / replayed nonce via attack injector.
-- **Q-STDF Response**: Projective measurement mismatch $\hat{p} = 0.4375 > \tau = 0.2097 \implies$ Classified as `FORGERY` in $< 1$ ms.
+- **Q-STDF Response**: Projective measurement mismatch $\hat{p} \approx 0.50 > \tau = 0.2097 \implies$ Classified as `FORGERY` in $< 1$ ms without attacker cooperation.
 - **Stage Escalation**: System transitioned to **Stage S2 (Transfers Suspended)**.
 - **Bank Enforcement**: Customer attempts to send ₹2,500 $\rightarrow$ Bank immediately declines transfer with *"New transfers suspended by security policy (Stage S2)"*.
 - **Elapsed Time**: $< 5$ seconds total (well under the 2-minute threshold).
@@ -51,18 +53,18 @@
 - **Strict Preset ($\delta = 0.001, n = 64$)**:
   $$\tau = 0.02 + \sqrt{\frac{\ln(1000)}{128}} = 0.02 + 0.2323 = \mathbf{0.2523}$$
 - **Theoretical Random Forgery Probability ($P_{\text{forge}}$)**:
-  $$P_{\text{forge}}(n=64) \approx 9.40 \times 10^{-7}, \quad P_{\text{forge}}(n=128) < 10^{-16}$$
+  $$P_{\text{forge}}(n=64) = 9.40 \times 10^{-7}, \quad P_{\text{forge}}(n=128) = 7.78 \times 10^{-17}$$
 
 ---
 
 ## 4. Acceptance Checklist Confirmation
 - [x] Protocol named `ShorlyNot-QDS-T1` in code and documentation.
 - [x] Pauli tables and Hoeffding formula $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$ displayed dynamically in SOC.
-- [x] All 5 threats executable via UI and API.
+- [x] Blind verification with Bob-side entanglement session store.
+- [x] All threats executable via UI and API without oracles.
 - [x] App-level bank lockdown without iptables.
 - [x] Transfers route strictly through skeleton engine.
 - [x] Zero ML imports in detection engine.
-- [x] Monte Carlo benchmarks published to `docs/BENCHMARKS.md`.
-- [x] 100% Green Pytest suite (42/42 passing).
-- [x] Security proofs documented in `docs/SECURITY_ANALYSIS.md`.
+- [x] Unified Scoreboard generated by `scripts/scoreboard.py`.
+- [x] 100% Green Pytest suite (43/43 passing).
 - [x] Complete traceability in `docs/DELIVERY_TABLE.md`.

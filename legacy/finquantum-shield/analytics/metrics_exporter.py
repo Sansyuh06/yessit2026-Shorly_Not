@@ -1,2 +1,0 @@
-class MetricsExporter:
-    pass
