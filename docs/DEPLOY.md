@@ -78,7 +78,7 @@ python -m app.main
    - **Result**: Repeated critical violations or channel disruption triggers **Stage S4 (Full Bank Lockdown)**.
    - Alice is redirected to the `/locked` page: *“Bank Services Suspended by Security Operations”*.
 5. **Review Metrics & Ops Reset**:
-   - Point out the **Information-Theoretic Security Card** on the SOC:
+   - Point out the **Random-Guessing Forgery Bound (P_forge)** card on the SOC:
      - Hoeffding parameters: $p_0=0.02, n=64, \delta=0.01 \implies \tau=0.2097$.
      - Theoretical bound: $P_{\text{forge}} = 9.40 \times 10^{-7}$.
      - Sub-millisecond verification latency ($< 1$ ms).

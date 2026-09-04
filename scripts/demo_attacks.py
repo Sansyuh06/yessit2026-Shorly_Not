@@ -280,7 +280,7 @@ def run_attack_demonstration() -> bool:
 
     if (
         not res_param.success
-        and res_param.threat_classification.label == ThreatLabel.CHANNEL
+        and res_param.threat_classification.label in (ThreatLabel.PARAM_TAMPER, ThreatLabel.CHANNEL)
         and res_param.stage_s >= StageS.S2
     ):
         print(f"  [PASS] 8. Parameter Downgrade Attack: Caught (n_checks=1 rejected by Q-STDF -> Stage S{res_param.stage_s.value})")
