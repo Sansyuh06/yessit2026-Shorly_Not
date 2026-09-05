@@ -4,8 +4,6 @@ SIH 2026 PS 26141 Hardened Defense.
 """
 
 import uuid
-from typing import List
-import numpy as np
 
 from shorlynot_skeleton.models import SignatureBundle, QuantumBackend, QuantumEngine
 

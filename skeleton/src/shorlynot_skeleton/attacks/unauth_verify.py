@@ -3,7 +3,6 @@ Unauthorized Verification Attack Simulation.
 SIH 2026 PS 26141.
 """
 
-from typing import Dict, Any
 
 
 class UnauthVerifyAttack:

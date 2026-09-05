@@ -7,7 +7,7 @@ import os
 import sqlite3
 import logging
 from datetime import datetime, timezone
-from typing import List, Dict, Optional, Any
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("shorlynot.bank.ledger")
@@ -37,7 +37,7 @@ class BankLedger:
         self.db_path = db_path or os.environ.get("BANK_DB_PATH", os.path.join(os.path.dirname(__file__), "..", "bank_ledger.db"))
         self._init_db()
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -140,7 +140,7 @@ class BankLedger:
             logger.exception("Failed to fetch all transaction history from SQLite ledger: %s", ex)
             return []
 
-    def clear(self):
+    def clear(self) -> None:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()

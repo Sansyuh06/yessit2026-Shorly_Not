@@ -3,11 +3,11 @@ Seed data specification for ShorlyNot Mock Bank.
 Normative specification from PRD §8.3 and §B9.
 """
 
-from typing import Dict, Any
+from typing import Dict
 
 
 class BankUser:
-    def __init__(self, username: str, password: str, role: str, starting_balance: float, key_id: str):
+    def __init__(self, username: str, password: str, role: str, starting_balance: float, key_id: str) -> None:
         self.username = username
         self.password = password
         self.role = role  # customer | attacker | soc

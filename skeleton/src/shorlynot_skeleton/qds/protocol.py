@@ -8,7 +8,7 @@ ALL Bell measurements come from real Qiskit Aer circuits.
 
 import time
 import uuid
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple
 import numpy as np
 
 from shorlynot_skeleton.models import SignatureBundle, VerifyResult, QuantumBackend, QuantumEngine
@@ -225,10 +225,18 @@ class QdsT1Protocol:
         for i in range(n):
             b_exp = expected_bits[i]
             beta = bases[i]
-            prov_syn = tuple(provided_syndromes[i]) if i < len(provided_syndromes) else (0, 0)
+            prov_syn: Tuple[int, int] = (
+                (int(provided_syndromes[i][0]), int(provided_syndromes[i][1]))
+                if i < len(provided_syndromes) and len(provided_syndromes[i]) >= 2
+                else (0, 0)
+            )
 
             if alice_measurements and i < len(alice_measurements):
-                true_syn = tuple(alice_measurements[i])
+                true_syn: Tuple[int, int] = (
+                    (int(alice_measurements[i][0]), int(alice_measurements[i][1]))
+                    if len(alice_measurements[i]) >= 2
+                    else (0, 0)
+                )
                 if mode == "circuit":
                     # Full hardware-in-the-loop Aer circuit execution
                     measured_bit = engine.run_circuit_verification(

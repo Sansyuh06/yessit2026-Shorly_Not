@@ -3,7 +3,6 @@ Channel Tampering / Man-in-the-Middle Attack Simulation.
 SIH 2026 PS 26141.
 """
 
-from typing import List
 import numpy as np
 from shorlynot_skeleton.models import SignatureBundle
 

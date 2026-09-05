@@ -9,7 +9,7 @@ to QKD session keys and QDS signature credentials.
 import hashlib
 import time
 import uuid
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from shorlynot_skeleton.qkd.bb84 import Bb84Simulator
@@ -31,13 +31,13 @@ class QuantumKeyRegistry:
     Central registry for quantum digital signature (QDS) keys and QKD session bindings.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._keys: Dict[str, KeyRecord] = {}
         self._user_to_keys: Dict[str, List[str]] = {}
         self._simulator = Bb84Simulator()
         self._seed_default_keys()
 
-    def _seed_default_keys(self):
+    def _seed_default_keys(self) -> None:
         """Seed initial key bindings for demo accounts."""
         defaults = [
             ("alice", "alice-key-1", "customer"),

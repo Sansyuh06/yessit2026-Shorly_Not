@@ -8,12 +8,11 @@ Normative specification from PRD §3.11, §B2.9, and §12 (Step 4).
 import time
 import os
 import numpy as np
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 from shorlynot_skeleton.models import (
     TransactionPayload,
     TransferPipelineRequest,
-    ThreatLabel,
     TauPreset
 )
 from shorlynot_skeleton.qds.protocol import QdsT1Protocol
@@ -108,10 +107,10 @@ class QuantumBenchmark:
                     tau_preset=TauPreset.NORMAL,
                     simulate_attack=atk
                 )
-                res = test_pipeline.execute_transfer(req)
-                if not res.success and res.threat_classification.label.value.lower() == atk:
+                pipe_res = test_pipeline.execute_transfer(req)
+                if not pipe_res.success and pipe_res.threat_classification and pipe_res.threat_classification.label.value.lower() == atk:
                     caught_count += 1
-                elif not res.success:
+                elif not pipe_res.success:
                     # Caught as related threat
                     caught_count += 1
                 
@@ -162,7 +161,7 @@ Under honest simulator/channel noise floor $p_0 = 0.02$ and false-reject budget 
         for n_str, data in curves.items():
             md_content += f"| **{data['n']}** | {data['p0']} | **{data['tau']}** | **{data['theoretical_p_forge']}** | {data['honest_accept_rate']*100:.1f}% | {data['empirical_p_forge']} | {data['avg_latency_ms']} ms |\n"
 
-        md_content += f"""
+        md_content += """
 ### Key Mathematical Insights:
 1. **Exponential Security Scaling**: As $n$ increases from 32 to 128, the theoretical random forgery acceptance probability $P_{{\\text{{forge}}}}$ decreases exponentially from $\\approx 10^{{-3}}$ to **$< 10^{{-11}}$**.
 2. **Information-Theoretic Framing**: In the stated independent Pauli measurement model, random guessers cannot beat the binomial tail threshold $\\lfloor \\tau n \\rfloor$.

@@ -6,7 +6,6 @@ FastAPI :8080 service for SIH 2026 PS 26141.
 import os
 import math
 import uuid
-from typing import Optional
 from fastapi import FastAPI, Request, Form, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,9 +17,7 @@ from bank.app.services.skeleton_client import SkeletonServiceClient
 from shorlynot_skeleton.models import (
     TransactionPayload,
     TransferPipelineRequest,
-    TauPreset,
-    ThreatLabel,
-    StageS
+    TauPreset
 )
 
 app = FastAPI(title="ShorlyNot Mock Bank & SOC", version="3.0.0")
@@ -230,7 +227,7 @@ def handle_transfer(
             status="COMMITTED",
             mismatch_rate=result.verify_result.mismatch_rate if result.verify_result else 0.0,
             tau=result.verify_result.tau if result.verify_result else 0.2097,
-            threat_label=result.threat_classification.label.value,
+            threat_label=result.threat_classification.label.value if result.threat_classification else "OK",
             stage_s=result.stage_s.value,
             details=f"Transfer ₹{amount:,.2f} to {to_user} committed to ledger."
         )
@@ -248,6 +245,8 @@ def handle_transfer(
         )
     else:
         # Transfer rejected / declined by security engine
+        threat_lbl = result.threat_classification.label.value if result.threat_classification else "SECURITY_VIOLATION"
+        threat_reason = result.threat_classification.reason if result.threat_classification else result.message
         ledger.record_transaction(
             tx_id=tx_id,
             from_user=user.username,
@@ -256,9 +255,9 @@ def handle_transfer(
             status="REJECTED",
             mismatch_rate=result.verify_result.mismatch_rate if result.verify_result else 0.0,
             tau=result.verify_result.tau if result.verify_result else 0.2097,
-            threat_label=result.threat_classification.label.value,
+            threat_label=threat_lbl,
             stage_s=result.stage_s.value,
-            details=f"Rejected: {result.threat_classification.reason}"
+            details=f"Rejected: {threat_reason}"
         )
 
         return templates.TemplateResponse(
@@ -268,7 +267,7 @@ def handle_transfer(
                 "current_user": user,
                 "stage_state": updated_stage_state,
                 "active_tab": "transfer",
-                "error": f"Security Policy Violation: {result.threat_classification.reason} (Stage S{result.stage_s.value})",
+                "error": f"Security Policy Violation: {threat_reason} (Stage S{result.stage_s.value})",
                 "success": None
             }
         )

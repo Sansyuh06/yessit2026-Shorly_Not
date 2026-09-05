@@ -11,7 +11,7 @@ simulates Bob's side of the distributed entanglement resource.
 import time
 import collections
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 
 
 @dataclass
@@ -36,7 +36,7 @@ class EntanglementSessionStore:
     During verify(), Bob reads ground truth solely from this store — never from the bundle transcript.
     """
 
-    def __init__(self, max_sessions: int = 10000, ttl_seconds: float = 3600.0):
+    def __init__(self, max_sessions: int = 10000, ttl_seconds: float = 3600.0) -> None:
         self._sessions: collections.OrderedDict[str, EntanglementSession] = collections.OrderedDict()
         self.max_sessions = max_sessions
         self.ttl_seconds = ttl_seconds
@@ -86,7 +86,7 @@ class EntanglementSessionStore:
 
         return session
 
-    def clear(self):
+    def clear(self) -> None:
         """Purge all active sessions (e.g. on admin reset)."""
         self._sessions.clear()
 

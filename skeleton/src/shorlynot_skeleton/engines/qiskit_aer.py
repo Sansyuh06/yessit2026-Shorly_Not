@@ -6,7 +6,7 @@ ALL quantum operations go through real Qiskit Aer circuits.
 No np.random faking of Bell measurements.
 """
 
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, Tuple, Any
 import numpy as np
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
 from qiskit_aer import AerSimulator

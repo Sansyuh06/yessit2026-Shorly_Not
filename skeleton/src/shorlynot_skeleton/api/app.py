@@ -5,15 +5,16 @@ Normative specification from PRD §7 and Part C4.
 """
 
 import collections
+import uuid
 from typing import Dict, List, Optional, Any
-from fastapi import FastAPI, HTTPException, status, Query, Body
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from shorlynot_skeleton import __version__, __protocol__
 from shorlynot_skeleton.models import (
     SignatureBundle,
-    VerifyResult,
+    TransactionPayload,
     TransferPipelineRequest,
     PipelineResult,
     StageState,
@@ -24,10 +25,10 @@ from shorlynot_skeleton.models import (
     ThreatLabel
 )
 from shorlynot_skeleton.pipeline import QuantumTransferPipeline
-from shorlynot_skeleton.qds.protocol import QdsT1Protocol
 from shorlynot_skeleton.backends.sim import SimBackend, IBMBackend
 from shorlynot_skeleton.detect.tau import TauCalculator
 from shorlynot_skeleton.qds.sessions import GLOBAL_ENTANGLEMENT_STORE
+from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
 
 
 app = FastAPI(
@@ -220,9 +221,6 @@ def trigger_attack(attack_type: str, req: Optional[AttackTriggerRequest] = None)
     """Trigger specific attack vector directly on the transfer pipeline."""
     user = req.target_user if req else "alice"
     amt = req.amount if req else 1000.0
-    
-    from shorlynot_skeleton.models import TransactionPayload
-    import uuid
 
     tx = TransactionPayload(
         from_user=user,
@@ -318,7 +316,6 @@ def generate_key_pair(req: KeyGenerateRequest) -> Dict[str, Any]:
     """
     Execute simulated QKD ceremony (BB84) to provision a new quantum-bound key pair for a user.
     """
-    from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
     record = GLOBAL_KEY_REGISTRY.provision_key_pair(
         user_id=req.user_id,
         role=req.role,
@@ -335,7 +332,6 @@ def generate_key_pair(req: KeyGenerateRequest) -> Dict[str, Any]:
 @app.get("/v1/keys/list")
 def list_keys() -> List[Dict[str, Any]]:
     """List all active registered quantum keys in the registry."""
-    from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
     return [k.model_dump() for k in GLOBAL_KEY_REGISTRY.list_keys()]
 
 

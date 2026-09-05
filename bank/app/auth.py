@@ -2,6 +2,7 @@
 Session-based authentication and user management for the mock bank.
 """
 
+import uuid
 from typing import Optional, Dict
 from fastapi import Request
 from bank.app.seed import BankUser, get_default_seed_users
@@ -12,7 +13,7 @@ class BankAuthManager:
     Manages user sessions and authentication.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.users: Dict[str, BankUser] = get_default_seed_users()
         self.sessions: Dict[str, str] = {}  # session_token -> username
 
@@ -23,7 +24,6 @@ class BankAuthManager:
         return None
 
     def create_session(self, username: str) -> str:
-        import uuid
         token = f"sess-{uuid.uuid4().hex}"
         self.sessions[token] = username
         return token
@@ -35,11 +35,12 @@ class BankAuthManager:
         username = self.sessions[token]
         return self.users.get(username)
 
-    def revoke_session(self, request: Request):
+    def revoke_session(self, request: Request) -> None:
         token = request.cookies.get("session_token")
         if token and token in self.sessions:
             del self.sessions[token]
 
-    def reset_users(self):
+    def reset_users(self) -> None:
         self.users = get_default_seed_users()
         self.sessions.clear()
+

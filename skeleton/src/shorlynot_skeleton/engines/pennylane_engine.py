@@ -6,7 +6,7 @@ Provides PennyLane teleportation circuits on default.qubit alongside Qiskit Aer,
 satisfying the dual-engine architecture specification.
 """
 
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, Tuple, Any
 import numpy as np
 import pennylane as qml
 

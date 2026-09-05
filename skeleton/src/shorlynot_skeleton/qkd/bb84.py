@@ -5,9 +5,7 @@ Support layer for ShorlyNot Quantum Security Pipeline.
 
 import hashlib
 import os
-import time
 import uuid
-from typing import Tuple, List, Optional
 import numpy as np
 
 
@@ -19,7 +17,7 @@ class QkdSessionResult:
         qber: float,
         sifted_bits_count: int,
         channel_status: str
-    ):
+    ) -> None:
         self.session_id = session_id
         self.session_key = session_key
         self.qber = qber
@@ -33,7 +31,7 @@ class Bb84Simulator:
     Computes Quantum Bit Error Rate (QBER) and outputs a 256-bit symmetric session key.
     """
 
-    def __init__(self, baseline_qber: float = 0.025, raw_bits_count: int = 512):
+    def __init__(self, baseline_qber: float = 0.025, raw_bits_count: int = 512) -> None:
         self.baseline_qber = baseline_qber
         self.raw_bits_count = raw_bits_count
 

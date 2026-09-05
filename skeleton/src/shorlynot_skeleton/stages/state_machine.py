@@ -8,7 +8,7 @@ Includes progressive escalation (repeated forgeries escalate S2 -> S3 -> S4).
 import collections
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional
 
 from shorlynot_skeleton.models import (
     StageS,
@@ -28,7 +28,7 @@ class StageStateMachine:
     Features progressive escalation: repeated attacks elevate severity all the way to S4 lockdown.
     """
 
-    def __init__(self, event_history_limit: int = 200):
+    def __init__(self, event_history_limit: int = 200) -> None:
         self.stage_s: StageS = StageS.S0
         self.stage_q: StageQ = StageQ.Q0
         self.last_threat: ThreatLabel = ThreatLabel.OK
@@ -45,7 +45,7 @@ class StageStateMachine:
         tau = TauCalculator.get_preset_tau(self.preset)
         p0 = 0.02
         n = 64
-        delta = TauCalculator.PRESETS[self.preset]["delta"]
+        delta = float(TauCalculator.PRESETS[self.preset]["delta"])
         transfers_allowed = (self.stage_s.value < StageS.S2.value)
         bank_locked = (self.stage_s.value >= StageS.S4.value)
 
@@ -87,7 +87,7 @@ class StageStateMachine:
         else:
             return StageQ.Q4
 
-    def update_qber(self, qber: float):
+    def update_qber(self, qber: float) -> None:
         self.stage_q = self.calculate_q_stage(qber)
 
     def process_threat_verdict(
@@ -166,7 +166,7 @@ class StageStateMachine:
 
         return self.stage_s
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset stages to normal operational baseline."""
         self.stage_s = StageS.S0
         self.stage_q = StageQ.Q0

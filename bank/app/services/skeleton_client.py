@@ -6,6 +6,7 @@ Eliminates dual-brain desync by binding to the single source of truth.
 """
 
 import os
+import uuid
 import httpx
 from typing import Dict, Any, Optional, List
 from shorlynot_skeleton.models import (
@@ -13,7 +14,9 @@ from shorlynot_skeleton.models import (
     PipelineResult,
     StageState,
     StageEvent,
-    MetricSummary
+    MetricSummary,
+    TransactionPayload,
+    TauPreset
 )
 
 
@@ -23,7 +26,7 @@ class SkeletonServiceClient:
     Guarantees consistent state across Bank UI, SOC Dashboard, and Skeleton Engine.
     """
 
-    def __init__(self, base_url: Optional[str] = None):
+    def __init__(self, base_url: Optional[str] = None) -> None:
         # Default to environment variable or standard port 8000
         self.base_url = base_url or os.environ.get("SHORLYNOT_API_URL", "http://127.0.0.1:8000")
         self.require_api = os.environ.get("SHORLYNOT_REQUIRE_API", "0").lower() in ("1", "true", "yes")
@@ -120,8 +123,6 @@ class SkeletonServiceClient:
         except Exception as e:
             raise RuntimeError(f"Skeleton API communication error: {e}") from e
 
-        import uuid
-        from shorlynot_skeleton.models import TransactionPayload, TauPreset
         tx = TransactionPayload(
             from_user=user,
             to_user="bob",

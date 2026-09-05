@@ -6,20 +6,13 @@ Normative specification from PRD §4.2.
 
 import hashlib
 import time
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional
 
 from shorlynot_skeleton.models import (
-    TransactionPayload,
     TransferPipelineRequest,
     PipelineResult,
-    SignatureBundle,
-    VerifyResult,
     ThreatClassification,
-    ThreatLabel,
-    StageS,
-    StageQ,
-    QuantumBackend,
-    TauPreset
+    StageS
 )
 from shorlynot_skeleton.qds.protocol import QdsT1Protocol
 from shorlynot_skeleton.qkd.bb84 import Bb84Simulator
@@ -29,9 +22,9 @@ from shorlynot_skeleton.detect.tau import TauCalculator
 from shorlynot_skeleton.stages.state_machine import StageStateMachine
 from shorlynot_skeleton.attacks.forgery import ForgeryAttack
 from shorlynot_skeleton.attacks.impersonation import ImpersonationAttack
-from shorlynot_skeleton.attacks.replay import ReplayAttack
 from shorlynot_skeleton.attacks.unauth_verify import UnauthVerifyAttack
 from shorlynot_skeleton.attacks.channel import ChannelTamperingAttack
+from shorlynot_skeleton.attacks.param_tamper import ParameterTamperingAttack
 
 
 class QuantumTransferPipeline:
@@ -135,7 +128,6 @@ class QuantumTransferPipeline:
             bundle = ChannelTamperingAttack.tamper_correction_bits(bundle)
             bundle = ChannelTamperingAttack.corrupt_pqc_ciphertext(bundle)
         elif request.simulate_attack in ("param_tamper", "param_downgrade"):
-            from shorlynot_skeleton.attacks.param_tamper import ParameterTamperingAttack
             bundle = ParameterTamperingAttack.generate_downgraded_bundle(
                 payload_hash=payload_hash,
                 claimed_key_id=signer_key,

@@ -3,7 +3,7 @@ Hoeffding Statistical Threshold Calculation for Q-STDF.
 Normative specification from PRD §3.10 and MODEL.md §7 & §8.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Any
 import numpy as np
 from scipy.stats import binom
 
@@ -16,7 +16,7 @@ class TauCalculator:
     tau = p0 + sqrt(ln(1/delta) / (2n))
     """
 
-    PRESETS: Dict[TauPreset, Dict[str, float]] = {
+    PRESETS: Dict[TauPreset, Dict[str, Any]] = {
         TauPreset.STRICT: {
             "delta": 0.001,
             "p0": 0.02,

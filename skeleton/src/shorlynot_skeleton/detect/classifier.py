@@ -5,20 +5,18 @@ Normative specification from PRD §4.3 and MODEL.md §10.
 """
 
 import collections
-import os
 import sqlite3
 import time
-from typing import Dict, Optional, Set, Any
+from typing import Dict, Optional, Set
 from shorlynot_skeleton.models import (
     ThreatLabel,
     ThreatClassification,
     SignatureBundle,
     VerifyResult,
-    StageS,
-    TauPreset
+    StageS
 )
-from shorlynot_skeleton.detect.tau import TauCalculator
 from shorlynot_skeleton.qds.sessions import GLOBAL_ENTANGLEMENT_STORE
+from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
 
 
 class QstdfClassifier:
@@ -43,7 +41,7 @@ class QstdfClassifier:
 
     AUTHORIZED_VERIFIERS = {"bob", "alice", "carol", "ops", "bank_validator", "system"}
 
-    def __init__(self, replay_cache_size: int = 10000, db_path: Optional[str] = None):
+    def __init__(self, replay_cache_size: int = 10000, db_path: Optional[str] = None) -> None:
         self.seen_nonces: collections.OrderedDict[str, float] = collections.OrderedDict()
         self.max_nonces = replay_cache_size
         self.key_bindings: Dict[str, str] = dict(self.DEFAULT_KEYS)
@@ -51,7 +49,7 @@ class QstdfClassifier:
         self.db_path = db_path
         self._init_persistent_cache()
 
-    def _init_persistent_cache(self):
+    def _init_persistent_cache(self) -> None:
         """Initialize persistent sqlite table for nonces if db_path is specified."""
         if self.db_path:
             try:
@@ -64,7 +62,7 @@ class QstdfClassifier:
             except Exception:
                 pass
 
-    def register_key(self, user: str, key_id: str):
+    def register_key(self, user: str, key_id: str) -> None:
         self.key_bindings[user] = key_id
 
     def is_nonce_seen(self, nonce: str) -> bool:
@@ -84,7 +82,7 @@ class QstdfClassifier:
                 pass
         return False
 
-    def record_nonce(self, nonce: str):
+    def record_nonce(self, nonce: str) -> None:
         if len(self.seen_nonces) >= self.max_nonces:
             self.seen_nonces.popitem(last=False)
         seen_at = time.time()
@@ -101,7 +99,7 @@ class QstdfClassifier:
             except Exception:
                 pass
 
-    def clear_replay_cache(self):
+    def clear_replay_cache(self) -> None:
         self.seen_nonces.clear()
         if self.db_path:
             try:
@@ -150,8 +148,6 @@ class QstdfClassifier:
         # -------------------------------------------------------------
         # STEP 2: IMPERSONATION (Signer Key ID Binding & Entanglement Session Origin)
         # -------------------------------------------------------------
-        from shorlynot_skeleton.qkd.key_registry import GLOBAL_KEY_REGISTRY
-
         # Check session-origin binding if session exists on Bob's side
         session = GLOBAL_ENTANGLEMENT_STORE.get_session(bundle.nonce)
         if session and session.key_id != bundle.key_id:

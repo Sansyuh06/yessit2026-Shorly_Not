@@ -4,7 +4,7 @@ Normative specification from PRD §3.4 and MODEL.md §3.
 """
 
 import hashlib
-from typing import List, Tuple
+from typing import List
 import numpy as np
 
 

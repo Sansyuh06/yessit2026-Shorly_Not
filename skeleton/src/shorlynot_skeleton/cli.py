@@ -4,8 +4,8 @@ SIH 2026 PS 26141.
 """
 
 import argparse
-import sys
 import json
+import uuid
 import uvicorn
 
 from shorlynot_skeleton import __version__, __protocol__
@@ -53,7 +53,6 @@ def main():
         bench.generate_markdown_report(res, output_path=args.output)
     elif args.command == "transfer":
         pipeline = QuantumTransferPipeline()
-        import uuid
         tx = TransactionPayload(
             from_user=args.from_user,
             to_user=args.to_user,

@@ -3,7 +3,6 @@ Pauli Correction Lookup Table and Unitary Operations for ShorlyNot-QDS-T1.
 Normative specification from PRD §3.7 and MODEL.md §5 & §6.
 """
 
-from typing import Tuple
 import numpy as np
 
 
