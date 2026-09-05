@@ -58,7 +58,12 @@ class QuantumTransferPipeline:
 
         # Step 1: QKD Session Negotiation
         inject_eve = (request.simulate_attack == "channel")
-        qkd_result = self.qkd.negotiate_session(inject_eavesdropper=inject_eve)
+        # Full interception for the channel-compromise scenario: a tapped
+        # link means Eve reads every qubit (expected QBER ≈ 25% -> Q4).
+        qkd_result = self.qkd.negotiate_session(
+            inject_eavesdropper=inject_eve,
+            eve_intercept_prob=1.0 if inject_eve else 0.0
+        )
         self.stage_machine.update_qber(qkd_result.qber)
         stage_q = self.stage_machine.stage_q
 
