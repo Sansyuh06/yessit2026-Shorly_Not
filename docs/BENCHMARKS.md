@@ -18,6 +18,9 @@ Under honest simulator/channel noise floor $p_0 = 0.02$ and false-reject budget 
 | **128** | 0.02 | **0.1541** | **7.7792e-17** | 100.0% | 0.0 | 178.398 ms |
 
 > [!NOTE]
+> **Empirical cell variance**: the Monte Carlo forgery loop runs 100 trials per parameter point (`min(self.trials, 100)` in `analysis/benchmark.py`), so the empirical column is successes per 100 runs, not per 10,000. At $n = 32$ the theoretical rate predicts about one success per 100 runs; the run that produced this file observed 2 (shown as 0.02), while `benchmarks_summary.csv`, written by a separate run of the same suite, records 0. Both are consistent with the bound; neither artifact is hand-edited.
+
+> [!NOTE]
 > **Latency decomposition**: the pipeline figure includes $n$ real Qiskit Aer sign circuits (dominant cost). Verification alone — analytic Born-rule evaluation, no circuit re-execution — is $\mathcal{O}(n)$ and runs at ~1 ms per transaction; see the `avg_verify_latency_ms` column of `benchmarks_summary.csv` (e.g. 1.068 ms at $n = 64$).
 
 ### Key Mathematical Insights:
