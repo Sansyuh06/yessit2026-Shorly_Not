@@ -150,18 +150,30 @@ def handle_transfer(
         return RedirectResponse(url="/locked", status_code=status.HTTP_303_SEE_OTHER)
 
     # Stage S2+ Check
+    actor = user.username
     if stage_state.stage_s.value >= 2:
-        return templates.TemplateResponse(
-            request=request,
-            name="transfer.html",
-            context={
-                "current_user": user,
-                "stage_state": stage_state,
-                "active_tab": "transfer",
-                "error": f"New transfers suspended by security policy (Stage S{stage_state.stage_s.value}).",
-                "success": None
-            }
+        account_quarantined = (
+            stage_state.lock_scope == "account"
+            and actor in (stage_state.quarantined_accounts or [])
         )
+        global_blocked = stage_state.lock_scope != "account"
+        if global_blocked or account_quarantined:
+            error = (
+                f"Your account is quarantined (Stage S{stage_state.stage_s.value})."
+                if account_quarantined
+                else f"New transfers suspended by security policy (Stage S{stage_state.stage_s.value})."
+            )
+            return templates.TemplateResponse(
+                request=request,
+                name="transfer.html",
+                context={
+                    "current_user": user,
+                    "stage_state": stage_state,
+                    "active_tab": "transfer",
+                    "error": error,
+                    "success": None
+                }
+            )
 
     # Balance and numeric integrity check
     if not math.isfinite(amount) or amount <= 0 or amount > user.balance:

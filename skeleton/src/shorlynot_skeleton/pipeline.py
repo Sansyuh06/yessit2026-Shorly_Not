@@ -5,6 +5,7 @@ Normative specification from PRD §4.2.
 """
 
 import hashlib
+import os
 import time
 from typing import Optional
 
@@ -41,7 +42,8 @@ class QuantumTransferPipeline:
     ):
         self.qds = qds_protocol or QdsT1Protocol(p0=0.02, default_delta=0.01)
         self.qkd = qkd_simulator or Bb84Simulator(baseline_qber=0.025)
-        self.classifier = classifier or QstdfClassifier()
+        _nonce_db = os.environ.get("SHORLYNOT_NONCE_DB") or "shorlynot_nonces.db"
+        self.classifier = classifier or QstdfClassifier(db_path=_nonce_db)
         self.stage_machine = stage_machine or StageStateMachine()
 
     def execute_transfer(self, request: TransferPipelineRequest) -> PipelineResult:
@@ -62,9 +64,13 @@ class QuantumTransferPipeline:
 
         # Check if active transfers allowed under current stage S
         current_state = self.stage_machine.get_state()
-        if not current_state.active_transfers_allowed:
+        actor = tx.from_user
+        if self.stage_machine.is_actor_blocked(actor):
             t_end = time.perf_counter()
-            reason = "Bank security lockdown active (Stage S4)" if current_state.bank_locked else "New transfers suspended by security policy (Stage S2+)"
+            if current_state.lock_scope == "account":
+                reason = f"Account quarantine active for {actor} (Stage S{current_state.stage_s.value})"
+            else:
+                reason = "Bank security lockdown active (Stage S4)" if current_state.bank_locked else "New transfers suspended by security policy (Stage S2+)"
             return PipelineResult(
                 success=False,
                 status_code=423 if current_state.bank_locked else 403,
@@ -179,11 +185,11 @@ class QuantumTransferPipeline:
         total_time_ms = round((t_end - t_start) * 1000, 3)
 
         # Step 8: Final Bank Authorization Decision
-        success = classification.passed and (stage_s.value < StageS.S2.value)
+        success = classification.passed and not self.stage_machine.is_actor_blocked(claimed_signer)
         status_code = 200 if success else (403 if stage_s.value < StageS.S4.value else 423)
         message = "Transfer successfully signed, verified, and committed to ledger." if success else classification.reason
 
-        bank_lock_status = "active" if stage_s.value < StageS.S2.value else ("bank_locked" if stage_s.value >= StageS.S4.value else "transfers_blocked")
+        bank_lock_status = "active" if success else ("bank_locked" if stage_s.value >= StageS.S4.value else "transfers_blocked")
 
         return PipelineResult(
             success=success,

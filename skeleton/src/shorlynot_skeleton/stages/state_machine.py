@@ -67,6 +67,22 @@ class StageStateMachine:
             events_count=len(self.events)
         )
 
+    def is_actor_blocked(self, actor: str) -> bool:
+        """
+        Scope-aware enforcement gate (read by the pipeline and the bank).
+
+        - Below S2: nobody is blocked.
+        - lock_scope == "account": only actors in quarantined_accounts are blocked
+          (other users keep transacting — no global DoS from a single forgery).
+        - lock_scope == "global" (or any unknown scope at S2+): everyone is blocked
+          (conservative default).
+        """
+        if self.stage_s.value < StageS.S2.value:
+            return False
+        if self.lock_scope == "account":
+            return actor in self.quarantined_accounts
+        return True
+
     def calculate_q_stage(self, qber: float) -> StageQ:
         """
         Map QBER percentage to Q stage according to Shor-Preskill literature bounds:
