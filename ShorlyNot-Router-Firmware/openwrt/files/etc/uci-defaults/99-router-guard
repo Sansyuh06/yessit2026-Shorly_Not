@@ -1,0 +1,21 @@
+#!/bin/sh
+# -----------------------------------------------------------------------------
+# UCI defaults script for ShorlyNot Router Guard
+# Executed once on first boot by /etc/init.d/boot, then automatically removed.
+# -----------------------------------------------------------------------------
+
+# Configure fw4 include for router_guard
+uci set firewall.router_guard=include
+uci set firewall.router_guard.type='nftables'
+uci set firewall.router_guard.path='/etc/firewall.router_guard'
+uci set firewall.router_guard.position='table-prepend'
+uci -q delete firewall.router_guard.chain
+uci -q delete firewall.router_guard.reload
+uci commit firewall
+
+# Enable the router_guard service on startup
+if [ -f /etc/init.d/router_guard ]; then
+    /etc/init.d/router_guard enable
+fi
+
+exit 0

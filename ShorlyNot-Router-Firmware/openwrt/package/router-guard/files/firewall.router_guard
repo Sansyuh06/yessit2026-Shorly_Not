@@ -1,0 +1,13 @@
+# fw4 / nftables include for router_guard
+# -----------------------------------------------------------------------
+# Declares a base chain hooked into netfilter 'forward' at priority -1.
+# This runs before fw4's default forward filter chain (priority 0).
+#
+# router_guard.sh adds/removes the DROP rule inside this chain at runtime:
+#   - RED   : adds 'tcp dport <port> drop'
+#   - GREEN : flushes the chain (reverting to policy accept)
+# -----------------------------------------------------------------------
+
+chain router_guard_forward {
+	type filter hook forward priority -1; policy accept;
+}

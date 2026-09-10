@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+env/
+venv/
+
+# Build artifacts & Images
+/build/
+/openwrt/openwrt-imagebuilder*/
+/openwrt/build_dir/
+/openwrt/staging_dir/
+/openwrt/dl/
+*.bin
+*.ipk
+*.tar.xz
+sha256sums
+sha256sums.txt
+/openwrt/sha256sums
+firmware/
+
+# Temporary directories and runtime logs
+/tmp/
+/var/
+*.log
+*.pid
+*.state
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+task.md
