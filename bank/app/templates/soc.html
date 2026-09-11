@@ -3,40 +3,174 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SOC Console · ShorlyNot Q-STDF Threat Monitoring</title>
-  <link rel="stylesheet" href="/static/css/soc.css">
+  <title>SOC Console · ShorlyNot Q-STDF Threat Radar & Router Guard</title>
+  <link rel="stylesheet" href="/static/css/soc.css?v=20260911_interactive_1">
 </head>
 <body class="soc-body">
   <!-- SOC Header -->
   <header class="soc-header">
     <div class="soc-brand">
       <div class="soc-logo">
-        <span class="soc-pulse-indicator"></span>
+        <span class="soc-pulse-indicator" id="header-pulse-dot"></span>
         <span>SHORLYNOT // SOC</span>
       </div>
-      <span style="font-family: var(--soc-mono); font-size: 0.75rem; color: var(--soc-text-dim); background: #090e1a; padding: 0.25rem 0.6rem; border-radius: 4px; border: 1px solid var(--soc-panel-border);">
-        PS 26141 · QUANTUM THREAT RADAR
+      <span class="soc-badge-subtitle">
+        PS 26141 · QUANTUM THREAT RADAR & HARDWARE NETFILTER
       </span>
     </div>
 
-    <div style="display: flex; gap: 1rem; align-items: center;">
-      <span id="soc-backend-badge" style="background: rgba(0, 242, 254, 0.1); color: var(--soc-accent); border: 1px solid rgba(0, 242, 254, 0.3); padding: 0.3rem 0.8rem; border-radius: 6px; font-family: var(--soc-mono); font-size: 0.8rem; font-weight: 700;">
+    <div class="soc-header-actions">
+      <!-- Interactive SFX Audio Toggle -->
+      <button type="button" id="btn-audio-toggle" class="soc-header-btn" title="Toggle High-Tech Audio Feedback">
+        <span id="audio-icon">🔇</span> <span id="audio-text">AUDIO: OFF</span>
+      </button>
+
+      <!-- 1-Click Guided Demo Tour -->
+      <button type="button" id="btn-guided-tour" class="soc-header-btn tour-btn" title="Launch Automated 5-Stage Demonstration Tour">
+        🚀 GUIDED DEMO TOUR
+      </button>
+
+      <span id="soc-backend-badge" class="soc-engine-badge">
         ENGINE: QISKIT AER (SIM)
       </span>
-      <a href="/home" target="_blank" style="color: var(--soc-text-dim); text-decoration: none; font-size: 0.85rem; padding: 0.3rem 0.8rem; border: 1px solid var(--soc-panel-border); border-radius: 6px;">
+      <a href="/home" target="_blank" class="soc-header-link">
         Open Customer Bank &rarr;
       </a>
     </div>
   </header>
 
+  <!-- Guided Tour Narrative Banner (Hidden by default, shown during tour) -->
+  <div id="tour-narrative-banner" class="tour-banner hidden">
+    <div class="tour-step-counter" id="tour-step-counter">STAGE 1 / 5</div>
+    <div class="tour-text" id="tour-text">Welcome to the ShorlyNot Quantum Defense Demo...</div>
+    <button type="button" id="btn-tour-skip" class="tour-skip-btn">END TOUR</button>
+  </div>
+
+  <!-- Top Telemetry Strip -->
+  <div class="soc-stats-strip">
+    <div class="stat-chip">
+      <div class="stat-chip-label">Quantum Crypto Engine</div>
+      <div class="stat-chip-val" style="color: var(--soc-accent);">ShorlyNot-QDS-T1</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Hardware Router Enforcer</div>
+      <div class="stat-chip-val" style="color: #38bdf8;">Archer C6 v3.20 (OpenWrt fw4)</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Physical QKD Channel</div>
+      <div class="stat-chip-val" id="soc-strip-qkd-status" style="color: #34d399;">
+        <span class="soc-pulse-indicator" id="soc-strip-qkd-dot"></span>
+        <span id="soc-strip-qkd-text">GREEN (1.4% QBER)</span>
+      </div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Mathematical Guarantee</div>
+      <div class="stat-chip-val" id="soc-strip-bound-text" style="color: #fbbf24;">Hoeffding Bound (τ=0.2097)</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Threat Radar Posture</div>
+      <div class="stat-chip-val" id="soc-strip-threat-posture" style="color: #34d399;">DEFENSES ACTIVE (S0)</div>
+    </div>
+  </div>
+
   <!-- SOC Main Grid -->
   <div class="soc-grid">
-    <!-- Left Column: Stage Gauges, Mismatch Meter, Pauli Table & Attack Panel -->
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <!-- Stage Cards -->
+    <!-- Left Column: Stage Gauges, Interactive Canvas Topology, Oscilloscope, Netfilter Panel -->
+    <div class="soc-col-left">
+
+      <!-- Interactive Network & Quantum Topology Map -->
       <div class="soc-panel">
         <div class="soc-panel-title">
-          <span>Security Stage Telemetry</span>
+          <span>Live Quantum Network Topology & Interceptor Radar</span>
+          <span class="soc-tag tag-cyan">INTERACTIVE NODES</span>
+        </div>
+        <div class="topology-container">
+          <svg id="topology-svg" viewBox="0 0 760 170" class="topology-svg">
+            <!-- Connecting Link Lines -->
+            <line x1="100" y1="85" x2="270" y2="85" id="link-alice-router" class="topo-link topo-link-green" />
+            <line x1="270" y1="85" x2="480" y2="85" id="link-router-kms" class="topo-link topo-link-green" />
+            <line x1="480" y1="85" x2="660" y2="85" id="link-kms-bank" class="topo-link topo-link-green" />
+            <line x1="375" y1="145" x2="375" y2="85" id="link-eve-qkd" class="topo-link topo-link-eve" />
+
+            <!-- Animated Particle Packets -->
+            <circle id="packet-1" r="5" class="packet packet-green">
+              <animateMotion id="anim-p1" dur="2s" repeatCount="indefinite" path="M 100 85 L 270 85" />
+            </circle>
+            <circle id="packet-2" r="5" class="packet packet-green">
+              <animateMotion id="anim-p2" dur="2.4s" repeatCount="indefinite" path="M 270 85 L 480 85" />
+            </circle>
+            <circle id="packet-3" r="5" class="packet packet-green">
+              <animateMotion id="anim-p3" dur="2.1s" repeatCount="indefinite" path="M 480 85 L 660 85" />
+            </circle>
+
+            <!-- Node 1: Alice (Client / Signer) -->
+            <g class="topo-node" id="node-alice" transform="translate(100, 85)">
+              <circle r="28" class="node-bg" />
+              <text y="4" text-anchor="middle" class="node-icon">💻</text>
+              <text y="42" text-anchor="middle" class="node-label">Alice (Client)</text>
+              <text y="54" text-anchor="middle" class="node-sub">192.168.1.100</text>
+            </g>
+
+            <!-- Node 2: OpenWrt Router (Archer C6 Netfilter) -->
+            <g class="topo-node" id="node-router" transform="translate(270, 85)">
+              <circle r="32" class="node-bg" id="node-router-circle" />
+              <text y="4" text-anchor="middle" class="node-icon">🛡️</text>
+              <text y="46" text-anchor="middle" class="node-label">Archer C6 Guard</text>
+              <text y="58" text-anchor="middle" class="node-sub" id="node-router-sub">192.168.1.1 (fw4)</text>
+            </g>
+
+            <!-- Node 3: QKD KMS Server -->
+            <g class="topo-node" id="node-kms" transform="translate(480, 85)">
+              <circle r="30" class="node-bg" id="node-kms-circle" />
+              <text y="4" text-anchor="middle" class="node-icon">⚛️</text>
+              <text y="44" text-anchor="middle" class="node-label">QKD KMS Engine</text>
+              <text y="56" text-anchor="middle" class="node-sub">192.168.1.2:8000</text>
+            </g>
+
+            <!-- Node 4: Bank Ledger Core -->
+            <g class="topo-node" id="node-bank" transform="translate(660, 85)">
+              <circle r="28" class="node-bg" />
+              <text y="4" text-anchor="middle" class="node-icon">🏦</text>
+              <text y="42" text-anchor="middle" class="node-label">Bank Core</text>
+              <text y="54" text-anchor="middle" class="node-sub">:8081 (Ledger)</text>
+            </g>
+
+            <!-- Node 5: Eve Eavesdropper (Attacker) -->
+            <g class="topo-node" id="node-eve" transform="translate(375, 145)">
+              <circle r="20" class="node-bg eve-bg" id="node-eve-circle" />
+              <text y="4" text-anchor="middle" class="node-icon">🕵️</text>
+              <text y="30" text-anchor="middle" class="node-label eve-label">Eve (Adversary)</text>
+            </g>
+          </svg>
+
+          <!-- Dynamic Node Inspector Tooltip -->
+          <div id="topo-inspector" class="topo-inspector hidden">
+            <div class="inspector-title" id="inspector-title">Node Inspector</div>
+            <div class="inspector-body" id="inspector-body">Details...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Oscilloscope & Quantum Waveform Display -->
+      <div class="soc-panel">
+        <div class="soc-panel-title">
+          <span>Real-Time Quantum Link Oscilloscope (60s Rolling Window)</span>
+          <span class="soc-tag tag-green" id="osc-status-pill">WAVEFORM: REAL-TIME</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="soc-oscilloscope" width="700" height="130" class="oscilloscope-canvas"></canvas>
+          <div class="osc-legend">
+            <span style="color: #34d399;">● QBER (% Error)</span>
+            <span style="color: #38bdf8;">● Signature Mismatch (p̂)</span>
+            <span style="color: #ff0055;">--- Hoeffding Cutoff (11.0% / τ)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security Stage Telemetry & Hoeffding Bound Calculator -->
+      <div class="soc-panel">
+        <div class="soc-panel-title">
+          <span>Security Stage Telemetry & Hoeffding Bound Sandbox</span>
           <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-accent);">LIVE STATUS</span>
         </div>
 
@@ -87,44 +221,268 @@
           </div>
         </div>
 
-        <!-- Information-Theoretic Security & Hoeffding Bounds Card -->
-        <div style="background: rgba(0, 242, 254, 0.03); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+        <!-- Interactive Bound Sandbox -->
+        <div class="bound-sandbox-card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <span style="font-size: 0.8rem; font-weight: 700; color: var(--soc-accent); text-transform: uppercase;">
-              Random-Guessing Forgery Bound (P_forge)
+              Random-Guessing Forgery Bound (P_forge) Calculator
             </span>
-            <span id="soc-pforge-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-family: var(--soc-mono); font-size: 0.8rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.4);">
+            <span id="soc-pforge-badge" class="soc-tag tag-green">
               P_forge: 9.40 &times; 10<sup>-7</sup>
             </span>
           </div>
 
-          <div style="font-family: var(--soc-mono); font-size: 0.75rem; color: var(--soc-text-dim); margin-bottom: 0.6rem;">
+          <div class="bound-formula-banner">
             Bound Formula: τ = p₀ + √(ln(1/δ) / 2n) &nbsp;|&nbsp; P_forge = Σ C(n,k)·(0.5)ⁿ
           </div>
 
-          <table class="params-table">
+          <!-- Interactive Parameter Controls -->
+          <div class="interactive-params-grid">
+            <div>
+              <div class="param-label">Check Qubits (n):</div>
+              <div class="param-btn-group" id="btn-group-n">
+                <button type="button" class="btn-param" data-n="16">16</button>
+                <button type="button" class="btn-param" data-n="32">32</button>
+                <button type="button" class="btn-param active" data-n="64">64</button>
+                <button type="button" class="btn-param" data-n="128">128</button>
+              </div>
+            </div>
+            <div>
+              <div class="param-label">False-Reject Budget (δ):</div>
+              <div class="param-btn-group" id="btn-group-delta">
+                <button type="button" class="btn-param" data-delta="0.05">Lenient (0.05)</button>
+                <button type="button" class="btn-param active" data-delta="0.01">Normal (0.01)</button>
+                <button type="button" class="btn-param" data-delta="0.001">Strict (0.001)</button>
+              </div>
+            </div>
+          </div>
+
+          <table class="params-table" style="margin-top: 0.75rem;">
             <tr>
               <td>Noise Floor (p₀)</td>
               <td id="soc-p0-val">0.02 (2.0%)</td>
             </tr>
             <tr>
-              <td>Check Positions (n)</td>
+              <td>Selected Check Positions (n)</td>
               <td id="soc-n-val">64 Qubits</td>
             </tr>
             <tr>
-              <td>False-Reject Budget (δ)</td>
-              <td id="soc-delta-val">0.01 (Normal Preset)</td>
+              <td>Target Confidence (1 - δ)</td>
+              <td id="soc-delta-val">99.0% (δ = 0.01)</td>
             </tr>
             <tr>
-              <td>Current Bound (τ)</td>
+              <td>Hoeffding Bound (τ)</td>
               <td id="soc-tau-param-val" style="color: #ff0055; font-weight: bold;">0.2097</td>
             </tr>
             <tr>
               <td>Adversary Model</td>
-              <td>Unentangled (ρ_B = ½ I ⟹ E[p̂] = 0.50)</td>
+              <td>Unentangled Blind-Guessing (E[p̂] = 0.50)</td>
             </tr>
           </table>
         </div>
+      </div>
+
+      <!-- OpenWrt Router Guard & Hardware Netfilter Panel -->
+      <div class="soc-panel iptables-panel">
+        <div class="soc-panel-title">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="soc-pulse-indicator" id="router-status-dot" style="background-color: var(--soc-green);"></span>
+            <span>OpenWrt Router Guard & Hardware Netfilter</span>
+          </div>
+          <span id="router-mode-badge" style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-green); background: rgba(16, 185, 129, 0.15); padding: 0.2rem 0.6rem; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.4);">
+            STATUS: GREEN (ONLINE)
+          </span>
+        </div>
+
+        <div class="router-hw-badge" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem;">
+          <span>🛡️ <strong>ROUTER:</strong> 192.168.1.1 (Archer C6 fw4) &nbsp;|&nbsp; <strong>KMS:</strong> 192.168.1.2:8000</span>
+          <span><strong>STATE FILE:</strong> <code style="background: rgba(0, 0, 0, 0.4); padding: 2px 6px; border-radius: 4px; color: #fff;">/tmp/router_guard.state: <strong id="soc-remote-state" style="color: #34d399;">GREEN</strong></code></span>
+        </div>
+
+        <!-- Real-time Physical Channel Metrics -->
+        <div class="router-metrics-grid">
+          <div class="router-metric-card">
+            <div class="router-metric-title">Quantum Bit Error (QBER)</div>
+            <div id="router-qber-val" class="router-metric-val" style="color: #34d399;">1.4%</div>
+          </div>
+          <div class="router-metric-card">
+            <div class="router-metric-title">Key Gen Rate</div>
+            <div id="router-keyrate-val" class="router-metric-val" style="color: #38bdf8;">2,420 bps</div>
+          </div>
+          <div class="router-metric-card">
+            <div class="router-metric-title">Router Action (Port 8765)</div>
+            <div id="router-action-val" class="router-metric-val" style="color: #34d399; font-size: 0.85rem;">ALLOW (Forwarding)</div>
+          </div>
+        </div>
+
+        <!-- QBER Slider & Visualizer with BB84 Thresholds -->
+        <div class="qber-meter-wrap">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+            <span style="color: var(--soc-text-dim);">PHYSICAL QUANTUM CHANNEL INTEGRITY</span>
+            <span id="router-qber-status-text" style="color: #34d399; font-family: var(--soc-mono);">CHANNEL HEALTHY (&lt; 4.0%)</span>
+          </div>
+
+          <!-- Interactive Tactile QBER Slider -->
+          <div class="interactive-slider-container">
+            <input type="range" id="qber-tactile-slider" min="0.0" max="22.0" step="0.2" value="1.4" class="tactile-slider" />
+            <div class="slider-val-readout" id="slider-readout">Slide to inject fiber drift: <strong>1.4%</strong></div>
+          </div>
+
+          <div class="qber-track">
+            <div id="router-qber-fill" class="qber-fill" style="width: 7%;"></div>
+            <div class="qber-threshold-line" style="left: 20%;" title="Warning Threshold (4.0%)"></div>
+            <div class="qber-threshold-line" style="left: 55%; background: #ff0055; box-shadow: 0 0 8px #ff0055;" title="BB84 Hard Cutoff (11.0%)"></div>
+          </div>
+          <div class="qber-legend">
+            <span>0%</span>
+            <span style="color: #fbbf24;">4% Optical Warn</span>
+            <span style="color: #f87171;">11% BB84 Eavesdrop Cutoff</span>
+            <span>22%</span>
+          </div>
+        </div>
+
+        <!-- Interactive Router Controls -->
+        <div style="font-size: 0.75rem; color: var(--soc-text-dim); margin-bottom: 0.4rem; font-weight: 600;">
+          ROUTER GUARD QUICK ACTIONS:
+        </div>
+        <div class="router-btns-grid">
+          <button type="button" class="btn-router btn-router-green" id="btn-router-force-green">FORCE GREEN</button>
+          <button type="button" class="btn-router btn-router-yellow" id="btn-router-inject-yellow">OPTICAL DRIFT</button>
+          <button type="button" class="btn-router btn-router-red" id="btn-router-inject-red">EAVESDROPPER</button>
+          <button type="button" class="btn-router btn-router-cycle" id="btn-router-cycle-demo">AUTO DEMO</button>
+        </div>
+
+        <!-- OpenWrt Netfilter Live Terminal Display -->
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="terminal-title">root@OpenWrt-ArcherC6:~# nft list chain inet fw4 router_guard_forward</span>
+            <span id="router-drop-counter" class="terminal-counter">DROPPED RELAY PKTS: 0</span>
+          </div>
+          <pre id="iptables-terminal-output" class="terminal-body"></pre>
+          
+          <!-- Clickable Interactive Terminal Diagnostic Commands -->
+          <div class="terminal-cmd-bar">
+            <span style="font-size: 0.7rem; color: var(--soc-text-dim); font-weight: 700;">QUICK QUERIES:</span>
+            <button type="button" class="btn-term-cmd" data-cmd="cat_state">cat /tmp/router_guard.state</button>
+            <button type="button" class="btn-term-cmd" data-cmd="nft_list">nft list fw4</button>
+            <button type="button" class="btn-term-cmd" data-cmd="link_status">curl /link_status</button>
+            <button type="button" class="btn-term-cmd" id="btn-copy-ssh">📋 Copy SSH Command</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Interactive Attack Arsenal, In-SOC Test Transfer, Live Event Stream -->
+    <div class="soc-col-right">
+
+      <!-- In-SOC Bank Transaction Live Probe -->
+      <div class="soc-panel test-transfer-panel">
+        <div class="soc-panel-title">
+          <span>In-SOC Transaction Flight Simulator</span>
+          <span class="soc-tag tag-cyan">LIVE PROBE</span>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--soc-text-dim); margin-bottom: 0.75rem;">
+          Dispatch a quantum-signed transaction directly from the SOC to prove real-time packet acceptance or hardware netfilter rejection:
+        </p>
+        <div class="flight-sim-bar">
+          <div class="flight-input-group">
+            <label>Amount (₹):</label>
+            <input type="number" id="sim-transfer-amount" value="500" min="10" max="10000" class="sim-input" />
+          </div>
+          <div class="flight-input-group">
+            <label>Recipient:</label>
+            <input type="text" id="sim-transfer-recipient" value="bob" class="sim-input" />
+          </div>
+          <button type="button" id="btn-sim-fire-transfer" class="btn-sim-fire">
+            ⚡ FIRE TEST TRANSACTION
+          </button>
+        </div>
+        <div id="sim-flight-result" class="flight-result-box hidden">
+          <div id="sim-result-header" class="flight-result-header">STATUS: AWAITING PROBE</div>
+          <div id="sim-result-details" class="flight-result-details">No test transaction executed yet.</div>
+        </div>
+      </div>
+
+      <!-- Quantum Signature Threat Arsenal & Attack Shortcuts -->
+      <div class="soc-panel">
+        <div class="soc-panel-title">
+          <span>Quantum Signature Threat Weapons</span>
+          <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: #f87171;">ATTACK INJECTORS</span>
+        </div>
+        
+        <!-- Live System Posture Banner -->
+        <div class="attack-announcement-banner">
+          <span>THREAT POSTURE: <strong id="soc-active-posture" style="color: #34d399;">BASELINE (GREEN)</strong></span>
+          <span>ROUTER: <strong id="soc-active-router-state" style="color: #34d399;">FORWARDING (GREEN)</strong></span>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--soc-text-dim); margin-bottom: 0.75rem;">
+          Trigger live ShorlyNot-QDS-T1 signature attack scenarios. Select any weapon to view the threat dossier and inject the attack:
+        </p>
+
+        <!-- Interactive Attack Dossier Card (Updates on hover / click) -->
+        <div class="attack-dossier-card" id="attack-dossier">
+          <div class="dossier-header">
+            <span class="dossier-title" id="dossier-title">FORGERY ATTACK (QDS-T1)</span>
+            <span class="soc-tag tag-red" id="dossier-layer">CRYPTOGRAPHIC LAYER</span>
+          </div>
+          <div class="dossier-desc" id="dossier-desc">
+            Adversary intercepts quantum state and guesses private signature bits. Mismatch rate jumps to ~50%, violating Hoeffding Bound τ=0.2097.
+          </div>
+          <div class="dossier-meta" id="dossier-meta">
+            <span>Target: <strong>Profile T1 QDS</strong></span>
+            <span>Mitigation: <strong>Immediate S4 Lockdown + Router fw4 Sever</strong></span>
+          </div>
+        </div>
+
+        <div class="attack-buttons-grid">
+          <button type="button" class="btn-attack active-weapon" data-attack="forgery"
+            data-title="FORGERY ATTACK (QDS-T1)"
+            data-desc="Adversary intercepts quantum states and guesses private signature bits. Expected mismatch p̂ ~ 0.50 exceeds Hoeffding bound τ=0.2097."
+            data-layer="PROFILE T1 QDS">
+            FORGERY <span class="attack-badge badge-red">TURNS RED</span>
+          </button>
+          <button type="button" class="btn-attack" data-attack="impersonation"
+            data-title="IDENTITY IMPERSONATION"
+            data-desc="Adversary tries to forge Alice's public Dilithium / QDS identity tokens without authorized KMS session credentials."
+            data-layer="HYBRID PQC/QDS">
+            IMPERSONATE <span class="attack-badge badge-red">TURNS RED</span>
+          </button>
+          <button type="button" class="btn-attack" data-attack="replay"
+            data-title="TRANSACTION REPLAY ATTACK"
+            data-desc="Attacker captures a valid past transfer packet and re-transmits it. Anomaly classifier catches duplicate transaction nonce."
+            data-layer="STATEFUL ENGINE">
+            REPLAY <span class="attack-badge badge-red">TURNS RED</span>
+          </button>
+          <button type="button" class="btn-attack" data-attack="unauth_verify"
+            data-title="UNAUTHORIZED VERIFIER"
+            data-desc="An unauthorized verifier node attempts to validate transactions without valid quantum public keys."
+            data-layer="ACCESS CONTROL">
+            UNAUTH <span class="attack-badge badge-red">TURNS RED</span>
+          </button>
+          <button type="button" class="btn-attack" data-attack="channel"
+            data-title="QUANTUM CHANNEL INTERCEPTION (EVE)"
+            data-desc="Eve taps physical QKD fiber link. Quantum Bit Error Rate (QBER) spikes to 16.5% >= 11% BB84 eavesdropping limit."
+            data-layer="PHYSICAL FIBER">
+            CHANNEL <span class="attack-badge badge-red">TURNS RED</span>
+          </button>
+          <button type="button" class="btn-attack" data-attack="param_tamper"
+            data-title="SECURITY DOWNGRADE TAMPERING"
+            data-desc="Attacker attempts to tamper with security parameters (tau threshold, delta budget) to weaken the verification engine."
+            data-layer="POLICY ENGINE">
+            DOWNGRADE <span class="attack-badge badge-red">TURNS RED</span>
+          </button>
+        </div>
+
+        <button type="button" id="soc-reset-btn" class="btn-reset">
+          RESET SECURITY DEFENSES <span class="attack-badge badge-green">TURNS GREEN</span>
+        </button>
       </div>
 
       <!-- Pauli Correction Matrix -->
@@ -162,104 +520,82 @@
         </table>
       </div>
 
-      <!-- Attack Shortcuts Panel -->
-      <div class="soc-panel">
+      <!-- Real-Time Event Stream with Search & Filter -->
+      <div class="soc-panel" style="flex: 1;">
         <div class="soc-panel-title">
-          <span>Attack Simulation Injectors</span>
-          <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: #f87171;">DEMO WEAPONS</span>
-        </div>
-        <p style="font-size: 0.8rem; color: var(--soc-text-dim); margin-bottom: 0.5rem;">
-          Trigger live signature attack scenarios to demonstrate immediate threshold detection and progressive stage escalation:
-        </p>
-
-        <div class="attack-buttons-grid">
-          <button type="button" class="btn-attack" data-attack="forgery">FORGERY</button>
-          <button type="button" class="btn-attack" data-attack="impersonation">IMPERSONATE</button>
-          <button type="button" class="btn-attack" data-attack="replay">REPLAY</button>
-          <button type="button" class="btn-attack" data-attack="unauth_verify">UNAUTH</button>
-          <button type="button" class="btn-attack" data-attack="channel">CHANNEL</button>
-          <button type="button" class="btn-attack" data-attack="param_tamper">DOWNGRADE</button>
+          <span>Live Quantum Telemetry & Threat Event Stream</span>
+          <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-green);">AUTO-REFRESHING</span>
         </div>
 
-        <button type="button" id="soc-reset-btn" class="btn-reset">
-          RESET SECURITY STAGES (S0, Q0)
-        </button>
-      </div>
-
-      <!-- Live IPTables Gateway Firewall Simulation -->
-      <div class="soc-panel iptables-panel">
-        <div class="soc-panel-title">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span class="soc-pulse-indicator" id="iptables-status-dot" style="background-color: var(--soc-green);"></span>
-            <span>Virtual IPTables & Gateway Firewall Simulation</span>
+        <!-- Interactive Search and Category Filters -->
+        <div class="feed-filters-bar">
+          <input type="text" id="feed-search-input" placeholder="Search event logs (actor, threat, tx)..." class="feed-search" />
+          <div class="feed-filter-tags">
+            <button type="button" class="filter-tag active" data-filter="ALL">ALL</button>
+            <button type="button" class="filter-tag" data-filter="THREATS">THREATS ONLY</button>
+            <button type="button" class="filter-tag" data-filter="FORGERY">FORGERY</button>
+            <button type="button" class="filter-tag" data-filter="REPLAY">REPLAY</button>
+            <button type="button" class="filter-tag" data-filter="CHANNEL">CHANNEL</button>
           </div>
-          <span id="iptables-mode-badge" style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-green); background: rgba(16, 185, 129, 0.15); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.4);">
-            POLICY: ACCEPT (S0)
-          </span>
         </div>
 
-        <div style="font-size: 0.78rem; color: var(--soc-text-dim); margin-bottom: 0.75rem;">
-          Real-time kernel packet filter simulation responding to Q-STDF quantum stage telemetry:
-        </div>
-
-        <!-- Terminal-style IPTables live display -->
-        <div class="terminal-container">
-          <div class="terminal-header">
-            <div class="terminal-dots">
-              <span class="dot red"></span>
-              <span class="dot yellow"></span>
-              <span class="dot green"></span>
-            </div>
-            <span class="terminal-title">root@shorlynot-gateway:~# iptables -v -L -n --line-numbers</span>
-            <span id="iptables-drop-counter" class="terminal-counter">DROPPED PKTS: 0</span>
-          </div>
-          <pre id="iptables-terminal-output" class="terminal-body"></pre>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right Column: Real-Time Event Stream -->
-    <div class="soc-panel">
-      <div class="soc-panel-title">
-        <span>Live Quantum Telemetry & Threat Event Stream</span>
-        <span style="font-size: 0.75rem; font-family: var(--soc-mono); color: var(--soc-green);">AUTO-REFRESHING</span>
-      </div>
-
-      <div style="flex: 1; overflow-y: auto; max-height: 750px;">
-        <table class="feed-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Threat Verdict</th>
-              <th>Stage</th>
-              <th>p̂</th>
-              <th>τ</th>
-              <th>Actor</th>
-              <th>Event Summary</th>
-            </tr>
-          </thead>
-          <tbody id="soc-feed-body">
-            {% for event in events %}
-              <tr class="{% if event.threat_label != 'OK' %}feed-row-threat{% endif %}">
-                <td>{{ event.timestamp.split('T')[1][:8] }}</td>
-                <td>
-                  <span class="soc-tag tag-{{ event.threat_label.lower().replace('_', '-') }}">
-                    {{ event.threat_label }}
-                  </span>
-                </td>
-                <td>S{{ event.stage_s }} / Q{{ event.stage_q }}</td>
-                <td>{{ "%.4f"|format(event.mismatch_rate) }}</td>
-                <td>{{ "%.4f"|format(event.tau) }}</td>
-                <td>{{ event.actor or 'system' }}</td>
-                <td title="{{ event.details }}">{{ event.details[:45] }}{% if event.details|length > 45 %}...{% endif %}</td>
+        <div style="flex: 1; overflow-y: auto; max-height: 480px;">
+          <table class="feed-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Threat Verdict</th>
+                <th>Stage</th>
+                <th>p̂</th>
+                <th>τ</th>
+                <th>Actor</th>
+                <th>Action</th>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+            </thead>
+            <tbody id="soc-feed-body">
+              {% for event in events %}
+                <tr class="{% if event.threat_label != 'OK' %}feed-row-threat{% endif %} clickable-event" data-details="{{ event.details }}" data-verdict="{{ event.threat_label }}">
+                  <td>{{ event.timestamp.split('T')[1][:8] }}</td>
+                  <td>
+                    <span class="soc-tag tag-{{ event.threat_label.lower().replace('_', '-') }}">
+                      {{ event.threat_label }}
+                    </span>
+                  </td>
+                  <td>S{{ event.stage_s }} / Q{{ event.stage_q }}</td>
+                  <td>{{ "%.4f"|format(event.mismatch_rate) }}</td>
+                  <td>{{ "%.4f"|format(event.tau) }}</td>
+                  <td>{{ event.actor or 'system' }}</td>
+                  <td><button type="button" class="btn-inspect-event">🔍 Inspect</button></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Interactive Event Forensics Modal -->
+  <div id="forensic-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">🔬 Cryptographic Forensics & Incident Dossier</span>
+        <button type="button" id="modal-close-btn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-content">
+        <!-- Injected via JavaScript -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-copy-forensic-json" class="btn-modal-action">📋 Copy Forensic Dossier</button>
+        <button type="button" id="btn-modal-dismiss" class="btn-modal-secondary">Dismiss</button>
       </div>
     </div>
   </div>
 
-  <script src="/static/js/soc.js"></script>
+  <!-- Toast Notification Container -->
+  <div id="soc-toast" class="soc-toast hidden">Notification</div>
+
+  <script src="/static/js/soc.js?v=20260911_interactive_1"></script>
 </body>
 </html>
