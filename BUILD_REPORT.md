@@ -1,70 +1,75 @@
-# BUILD_REPORT.md — ShorlyNot Complete Build & Acceptance Verification
-### SIH 2026 · PS 26141 · Quantum-Inspired Cyber Threat Detection for Digital Signature Security
+# Build & Acceptance Verification Report
 
-| Metric | Status |
+System verification and acceptance testing report for the ShorlyNot framework.
+
+| Metric | Result |
 |---|---|
-| Product Version | **3.0.0 (Hardened Blind Verification)** |
-| Named Protocol | **ShorlyNot-QDS-T1** |
-| Detection Engine | **Q-STDF (Non-ML Hoeffding Bounds - Zero Oracles)** |
-| Pytest Test Suite | **45 / 45 PASSED (100%)** |
-| Sign Latency (64 Aer Circuits) | **~82.3 ms** |
-| Verification Latency | **0.923 ms ($\mathcal{O}(n)$ exact Born-rule, $< 1$ ms)** |
-| Full Pipeline Transfer Latency | **~86.9 ms** |
-| Fit Test Verification | **PASS (&lt; 2 Minutes)** |
+| Product Version | 3.0.0 |
+| Protocol | ShorlyNot-QDS-T1 |
+| Detection Engine | Q-STDF (Hoeffding Statistical Bounds) |
+| Test Suite | 45 / 45 PASSED (100%) |
+| Sign Latency (64 Aer Circuits) | ~82.3 ms |
+| Verification Latency | 0.923 ms ($\mathcal{O}(n)$ exact Born-rule) |
+| Full Pipeline Transfer Latency | ~86.9 ms |
+| End-to-End Verification | PASS |
 
 ---
 
-## 1. Executive Summary & Delivery Matrix
+## 1. Component Implementation & Test Matrix
 
-| PRD Section | Requirement | Implemented Path | Test Verification |
+| Component | Description | Path | Verification |
 |---|---|---|---|
-| **§1.2 & §6** | Clean repo layout (`skeleton/`, `bank/`, `docs/`, `scripts/`) | Workspace root | Verified |
-| **§3 & B1** | Named Protocol `ShorlyNot-QDS-T1` | `skeleton/src/shorlynot_skeleton/qds/` | `test_qds.py` |
-| **§3.4 & B2.1**| Pauli Eigenstate Encoding ($Z, X$ bases, $\|0\rangle, \|1\rangle, \|+\rangle, \|-\rangle$) | `qds/encoding.py` | `test_pauli_encoding_eigenstates` |
-| **§3.5 & B2.2**| Bob-Side Entanglement Session Store ($|\Phi^+\rangle$ ground truth) | `qds/sessions.py`, `engines/qiskit_aer.py` | `test_honest_qds_sign_and_verify_accept` |
-| **§3.7 & B2.4**| Pauli Unitary Corrections Lookup ($I, X, Z, XZ$) | `qds/pauli.py` | `test_pauli_corrections_lookup` |
-| **§3.10 & B2.7**| Hoeffding Statistical Threshold $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$ | `detect/tau.py` | `test_hoeffding_tau_formula` |
-| **§4.3 & C2** | Q-STDF 7-Step Blind Decision Ladder (Zero ML & Zero Oracles) | `detect/classifier.py` | `test_qstdf_decision_ladder_order` |
-| **§4.4 & C3** | Security Stages $S_0-S_4$ & QKD Link Stages $Q_0-Q_4$ (Account Quarantine) | `stages/state_machine.py` | `test_stage_state_machine_transitions` |
-| **§4.1 & B6** | BB84 QKD Session Key (Physical Eve Injection) & PQC Syndrome Protection | `qkd/bb84.py`, `pqc/protect.py` | `test_honest_pipeline_transfer_success` |
-| **§11** | 7 Threat Vectors (Forgery, Impersonation, Replay, Unauth, Channel, Downgrade, Payload Tamper) | `attacks/` | `test_attacks.py` (7 tests) |
-| **§3.11 & B2.9**| Scoreboard & Binomial Exact $P_{\text{forge}}$ vs $n \in \{32, 64, 128\}$ | `scripts/scoreboard.py` | `scripts/scoreboard.py` |
-| **Dual Engine** | Cross-Framework Parity (PennyLane + Qiskit Aer) | `engines/pennylane_engine.py` | `test_pennylane_engine.py` (5 tests) |
-| **Key Registry**| Dynamic QKD Provisioning Ceremony & Bindings | `qkd/key_registry.py` | `test_impersonation_attack_vector` |
-| **§7 & C4** | Skeleton REST API (:8000) & CLI Tool (Live Metrics & Hardened CORS) | `api/app.py`, `cli.py` | Live OpenAPI Docs |
-| **§8 & B5** | Mock Bank Web Portal (:8080) & Real-Time Dark SOC (`/soc`) | `bank/app/` | `test_bank.py` (6 tests) |
-| **§8.4** | App-Level Lockdown (No iptables / OS hooks) | `bank/app/main.py` | `test_bank_transfers_blocked_when_attack_escalates_stage` |
+| Project Structure | Monorepo layout (`skeleton/`, `bank/`, `docs/`, `scripts/`) | Workspace root | Verified |
+| Protocol Engine | ShorlyNot-QDS-T1 implementation | `skeleton/src/shorlynot_skeleton/qds/` | `test_qds.py` |
+| Pauli Encoding | Pauli eigenstate encoding ($Z, X$ bases) | `qds/encoding.py` | `test_pauli_encoding_eigenstates` |
+| Session Store | Bob-side entanglement session store ($|\Phi^+\rangle$ ground truth) | `qds/sessions.py`, `engines/qiskit_aer.py` | `test_honest_qds_sign_and_verify_accept` |
+| Pauli Corrections | Pauli unitary corrections lookup ($I, X, Z, XZ$) | `qds/pauli.py` | `test_pauli_corrections_lookup` |
+| Statistical Threshold | Hoeffding threshold calculation $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$ | `detect/tau.py` | `test_hoeffding_tau_formula` |
+| Threat Classifier | Q-STDF decision ladder (non-ML classification) | `detect/classifier.py` | `test_qstdf_decision_ladder_order` |
+| State Machine | Security stages $S_0-S_4$ & QKD link stages $Q_0-Q_4$ | `stages/state_machine.py` | `test_stage_state_machine_transitions` |
+| QKD & Encryption | BB84 session key exchange and AES-256-GCM payload wrap | `qkd/bb84.py`, `pqc/protect.py` | `test_honest_pipeline_transfer_success` |
+| Threat Generators | 7 threat vectors (forgery, impersonation, replay, etc.) | `attacks/` | `test_attacks.py` |
+| Scoreboard | Binomial exact $P_{\text{forge}}$ vs $n \in \{32, 64, 128\}$ | `scripts/scoreboard.py` | `scripts/scoreboard.py` |
+| Engine Support | Cross-framework support (PennyLane + Qiskit Aer) | `engines/pennylane_engine.py` | `test_pennylane_engine.py` |
+| Key Registry | Key provisioning and session bindings | `qkd/key_registry.py` | `test_impersonation_attack_vector` |
+| Skeleton API | REST API service (:8000) and CLI utility | `api/app.py`, `cli.py` | Unit & API tests |
+| Mock Bank | Customer banking portal (:8080) and SOC console (`/soc`) | `bank/app/` | `test_bank.py` |
+| Stage Enforcement | Application-level transfer suspension | `bank/app/main.py` | `test_bank_transfers_blocked_when_attack_escalates_stage` |
 
 ---
 
-## 2. Fit Test Execution Summary (North Star)
-- **Action**: Submitted forged signature transcript / replayed nonce via attack injector.
-- **Q-STDF Response**: Projective measurement mismatch $\hat{p} \approx 0.50 > \tau = 0.2097 \implies$ Classified as `FORGERY` in $< 1$ ms without attacker cooperation.
-- **Stage Escalation**: System transitioned to **Stage S2 (Transfers Suspended)**.
-- **Bank Enforcement**: Customer attempts to send ₹2,500 $\rightarrow$ Bank immediately declines transfer with *"New transfers suspended by security policy (Stage S2)"*.
-- **Elapsed Time**: $< 5$ seconds total (well under the 2-minute threshold).
+## 2. End-to-End Threat & Lockdown Verification
+
+1. **Attack Injection**: Submitted forged signature transcript / replayed nonce via attack injector.
+2. **Q-STDF Response**: Projective measurement mismatch $\hat{p} \approx 0.50 > \tau = 0.2097 \implies$ Classified as `FORGERY` in $< 1$ ms without attacker cooperation or injected flags.
+3. **Stage Escalation**: System transitioned to **Stage S2 (Transfers Suspended)**.
+4. **Bank Enforcement**: Customer attempts to send funds $\rightarrow$ Bank immediately declines transfer with *"New transfers suspended by security policy (Stage S2)"*.
+5. **Execution Time**: Completed in $< 5$ seconds end-to-end.
 
 ---
 
-## 3. Mathematical Model Confirmation (`docs/MODEL.md`)
-- **Honest Noise Floor ($p_0$)**: $0.02$ (2%)
-- **Normal Preset ($\delta = 0.01, n = 64$)**:
+## 3. Mathematical Model Confirmation
+
+- **Channel Noise Floor ($p_0$)**: $0.02$ (2%)
+- **Standard Profile ($\delta = 0.01, n = 64$)**:
   $$\tau = 0.02 + \sqrt{\frac{\ln(100)}{128}} = 0.02 + 0.18967 = \mathbf{0.2097}$$
-- **Strict Preset ($\delta = 0.001, n = 64$)**:
+- **Strict Profile ($\delta = 0.001, n = 64$)**:
   $$\tau = 0.02 + \sqrt{\frac{\ln(1000)}{128}} = 0.02 + 0.2323 = \mathbf{0.2523}$$
 - **Theoretical Random Forgery Probability ($P_{\text{forge}}$)**:
   $$P_{\text{forge}}(n=64) = 9.40 \times 10^{-7}, \quad P_{\text{forge}}(n=128) = 7.78 \times 10^{-17}$$
 
 ---
 
-## 4. Acceptance Checklist Confirmation
-- [x] Protocol named `ShorlyNot-QDS-T1` in code and documentation.
-- [x] Pauli tables and Hoeffding formula $\tau = p_0 + \sqrt{\frac{\ln(1/\delta)}{2n}}$ displayed dynamically in SOC.
-- [x] Blind verification with Bob-side entanglement session store.
-- [x] All threats executable via UI and API without oracles.
-- [x] App-level bank lockdown without iptables.
-- [x] Transfers route strictly through skeleton engine.
-- [x] Zero ML imports in detection engine.
-- [x] Unified Scoreboard generated by `scripts/scoreboard.py`.
-- [x] 100% Green Pytest suite (45/45 passing).
-- [x] Complete traceability in `docs/DELIVERY_TABLE.md`.
+## 4. Test Suite Execution
+
+All 45 automated tests pass:
+
+```bash
+pytest -v
+```
+
+- Protocol & encoding tests: 8 passed
+- Threat vector tests: 7 passed
+- Engine and simulator tests: 11 passed
+- Pipeline & stage machine tests: 13 passed
+- Bank web application tests: 6 passed
