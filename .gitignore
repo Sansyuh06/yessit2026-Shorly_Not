@@ -42,3 +42,13 @@ dist/
 .DS_Store
 Thumbs.db
 *.db
+
+# Media & Presentation Assets
+video/
+scratch/
+*.glb
+*.exr
+*.mp4
+*.m4a
+*.webm
+
