@@ -64,3 +64,34 @@ def test_transfer_blocked_when_router_is_red():
 
     # Restore to GREEN
     client.post("/api/router/set_state?state=GREEN", headers={"X-Test-Client": "1"})
+
+
+def test_router_client_health_check_and_poll_counter():
+    rg = RouterGuardClient(max_retries=1)
+    # Initial state should show 0 polls
+    assert rg._cached_status["polls"] == 0
+
+    # Poll status triggers poll increment
+    status = rg.get_status()
+    assert status["polls"] >= 1
+    assert "dropped_packets" in status
+
+    # When connected and GREEN -> healthy
+    rg._cached_status["connected"] = True
+    rg._cached_status["status"] = "GREEN"
+    assert rg.is_healthy() is True
+
+    # When status escalates to RED -> not healthy
+    rg._cached_status["status"] = "RED"
+    assert rg.is_healthy() is False
+
+
+def test_router_client_custom_retry_configuration():
+    # Verify retry count clamping and endpoint uniqueness
+    rg = RouterGuardClient(kms_url="http://192.168.1.50:9000", max_retries=3)
+    assert rg.max_retries == 3
+    endpoints = rg._get_candidate_endpoints()
+    assert "http://192.168.1.50:9000" in endpoints
+    # Ensure no duplicates in candidates
+    assert len(endpoints) == len(set(endpoints))
+
