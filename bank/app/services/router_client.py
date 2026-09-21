@@ -31,11 +31,12 @@ class RouterGuardClient:
     with seamless local loopback fallback (http://127.0.0.1:8000).
     """
 
-    def __init__(self, kms_url: Optional[str] = None):
+    def __init__(self, kms_url: Optional[str] = None, max_retries: int = 2):
         # Priority: explicit param > env var > hardware default (192.168.1.2:8000)
         self.explicit_kms_url = kms_url or os.environ.get("KMS_URL")
         self.hardware_kms_url = HARDWARE_KMS_DEFAULT_URL
         self.active_kms_url = self.explicit_kms_url or self.hardware_kms_url
+        self.max_retries = max(1, max_retries)
 
         self.relay_port = int(os.environ.get("RELAY_PORT", 8765))
         self.hardware_info = {
@@ -70,6 +71,10 @@ class RouterGuardClient:
         }
         self._total_drops = 0
         self._last_probe_time = 0.0
+
+    def is_healthy(self) -> bool:
+        """Returns True if the physical router guard is reachable and quantum link is not severed."""
+        return bool(self._cached_status.get("connected", False)) and self._cached_status.get("status") != "RED"
 
     def _probe_physical_router_state(self) -> Optional[str]:
         """Directly probes /tmp/router_guard.state on the physical OpenWrt router via SSH."""
@@ -116,29 +121,36 @@ class RouterGuardClient:
         return unique
 
     def get_status(self) -> Dict[str, Any]:
-        """Fetch real-time physical link status from /link_status and kernel telemetry."""
+        """Fetch real-time physical link status from /link_status and kernel telemetry with retry fallback."""
         connected = False
         candidates = self._get_candidate_endpoints()
+        self._cached_status["polls"] = int(self._cached_status.get("polls", 0)) + 1
 
         for candidate in candidates:
-            try:
-                with httpx.Client(timeout=0.6) as client:
-                    # Primary check: /link_status as requested
-                    resp = client.get(f"{candidate}/link_status")
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        self.active_kms_url = candidate
-                        self._cached_status.update({
-                            "status": data.get("status", "GREEN"),
-                            "qber": float(data.get("qber", 1.4)),
-                            "key_rate": int(data.get("key_rate", 2420)),
-                            "connected": True,
-                            "active_endpoint": f"{candidate}/link_status"
-                        })
-                        connected = True
-                        break
-            except Exception:
-                continue
+            success = False
+            for attempt in range(self.max_retries):
+                try:
+                    with httpx.Client(timeout=0.6) as client:
+                        resp = client.get(f"{candidate}/link_status")
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            self.active_kms_url = candidate
+                            self._cached_status.update({
+                                "status": data.get("status", "GREEN"),
+                                "qber": float(data.get("qber", 1.4)),
+                                "key_rate": int(data.get("key_rate", 2420)),
+                                "connected": True,
+                                "active_endpoint": f"{candidate}/link_status"
+                            })
+                            connected = True
+                            success = True
+                            break
+                except Exception as exc:
+                    logger.debug("Failed attempt %d connecting to %s: %s", attempt + 1, candidate, exc)
+                    if attempt < self.max_retries - 1:
+                        time.sleep(0.05)
+            if success:
+                break
 
         if not connected:
             self._cached_status["connected"] = False
