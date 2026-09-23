@@ -632,6 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let filtered = events.filter(e => {
       const matchTag = (activeFilterTag === 'ALL')
         || (activeFilterTag === 'THREATS' && e.threat_label !== 'OK')
+        || (activeFilterTag === 'HARDWARE' && (e.threat_label.includes('ROUTER') || (e.details && (e.details.toLowerCase().includes('router') || e.details.toLowerCase().includes('hardware') || e.details.toLowerCase().includes('archer')))))
         || (e.threat_label.toUpperCase().includes(activeFilterTag));
       
       const textToMatch = `${e.threat_label} ${e.actor} ${e.details}`.toLowerCase();
