@@ -83,6 +83,12 @@ python -m app.main
      - Theoretical bound: $P_{\text{forge}} = 9.40 \times 10^{-7}$.
      - Sub-millisecond verification latency ($< 1$ ms).
    - Click **RESET SECURITY STAGES (S0, Q0)** on the SOC console to restore normal bank operations.
+6. **Physical Router Guard Demonstration (Archer C6)**:
+   - On the SOC console, observe the **Archer C6 Live Kernel Guard** card.
+   - Click **CHANNEL** attack or invoke state transition to `RED`.
+   - Observe live telemetry: QBER spikes to 16.5%, key rate drops to 0 bps, and `nftables` dynamic rule drops relay port `8765`.
+   - Attempting a transfer triggers immediate rejection: *“Physical Quantum Channel Severed by Hardware Guard”*.
+   - Filter the live event table using the **ROUTER GUARD** filter tag to isolate kernel netfilter events.
 
 ---
 

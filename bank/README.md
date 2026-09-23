@@ -29,3 +29,14 @@ The bank portal will be available at `http://127.0.0.1:8080`.
 | `carol` | `carol123` | Third-party customer |
 | `eve` | `eve123` | Attacker account |
 | `ops` | `ops123` | SOC operations officer |
+
+## OpenWrt Router Guard & Hardware Telemetry
+
+The SOC console (`/soc`) integrates with a physical or simulated TP-Link Archer C6 OpenWrt router (`192.168.1.1`):
+- **Live Netfilter Guard**: Injects dynamic `nftables` forward rules based on link quality.
+- **Link States**:
+  - `GREEN` (QBER < 5%): Normal transmission, full relay bandwidth on port `8765`.
+  - `YELLOW` (QBER 5–11%): Elevated channel noise, audit rate-limiting triggered.
+  - `RED` (QBER > 11%): Channel compromised, netfilter severs packet relay forward chain.
+- **Feed Search & Filter Tags**: Real-time filtering by category (`ALL`, `THREATS`, `FORGERY`, `REPLAY`, `CHANNEL`, `ROUTER GUARD`) with instant client-side text search.
+
