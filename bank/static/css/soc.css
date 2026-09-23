@@ -1153,6 +1153,7 @@ body.soc-body {
   border-color: var(--soc-accent);
   color: var(--soc-accent);
   font-weight: 700;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
 }
 
 .feed-table {
@@ -1160,6 +1161,7 @@ body.soc-body {
   border-collapse: collapse;
   font-size: 0.75rem;
   font-family: var(--soc-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .feed-table th {
@@ -1178,10 +1180,12 @@ body.soc-body {
 .feed-table td {
   padding: 0.45rem 0.5rem;
   border-bottom: 1px solid #131d33;
+  white-space: nowrap;
 }
 
 .feed-row-threat {
-  background: rgba(239, 68, 68, 0.08);
+  background: rgba(239, 68, 68, 0.10);
+  border-left: 2px solid #ef4444;
 }
 
 .clickable-event {
