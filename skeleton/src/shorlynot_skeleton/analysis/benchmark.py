@@ -204,3 +204,19 @@ Under honest simulator/channel noise floor $p_0 = 0.02$ and false-reject budget 
 
         print(f"[+] Benchmark report successfully written to {output_path}")
 
+    def export_csv_summary(self, results: Dict[str, Any], output_path: str = "docs/benchmarks_summary.csv") -> None:
+        """
+        Export tabular benchmark parameter sweep metrics to CSV format.
+        """
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        curves = results.get("scaling_curves", {})
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("check_positions,noise_floor_p0,false_reject_delta,hoeffding_tau,theoretical_p_forge,honest_accept_rate,empirical_p_forge,avg_verify_latency_ms\n")
+            for _, data in curves.items():
+                f.write(
+                    f"{data['n']},{data['p0']},{data['delta']},{data['tau']},"
+                    f"{data['theoretical_p_forge']},{data['honest_accept_rate']:.2f},"
+                    f"{data['empirical_p_forge']:.2f},{data['avg_latency_ms']:.3f}\n"
+                )
+        print(f"[+] Benchmark CSV summary exported to {output_path}")
+
