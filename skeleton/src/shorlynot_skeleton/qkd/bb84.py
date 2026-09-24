@@ -6,6 +6,7 @@ Support layer for ShorlyNot Quantum Security Pipeline.
 import hashlib
 import os
 import uuid
+from typing import Optional
 import numpy as np
 
 
@@ -32,37 +33,52 @@ class Bb84Simulator:
     """
 
     def __init__(self, baseline_qber: float = 0.025, raw_bits_count: int = 512) -> None:
+        if not (0.0 <= baseline_qber <= 0.5):
+            raise ValueError(f"baseline_qber must be in [0.0, 0.5], got {baseline_qber}")
+        if raw_bits_count < 128:
+            raise ValueError(f"raw_bits_count must be at least 128, got {raw_bits_count}")
         self.baseline_qber = baseline_qber
         self.raw_bits_count = raw_bits_count
 
-    def negotiate_session(self, inject_eavesdropper: bool = False, eve_intercept_prob: float = 0.5) -> QkdSessionResult:
+    def negotiate_session(
+        self,
+        inject_eavesdropper: bool = False,
+        eve_intercept_prob: float = 0.5,
+        seed: Optional[int] = None
+    ) -> QkdSessionResult:
         """
         Execute BB84 key exchange session simulation.
+
+        Args:
+            inject_eavesdropper: Whether to simulate an intercept-resend attacker (Eve).
+            eve_intercept_prob: Probability that Eve intercepts any given qubit.
+            seed: Optional integer seed for deterministic testing.
         """
+        rng = np.random.default_rng(seed)
         session_id = f"qkd-sess-{uuid.uuid4().hex[:12]}"
         
         # 1. Alice generates random bits and random bases (0 = Z, 1 = X)
-        alice_bits = np.random.randint(0, 2, size=self.raw_bits_count)
-        alice_bases = np.random.randint(0, 2, size=self.raw_bits_count)
+        alice_bits = rng.integers(0, 2, size=self.raw_bits_count)
+        alice_bases = rng.integers(0, 2, size=self.raw_bits_count)
 
         # 2. Channel transmission (optional Eve interception)
         channel_bits = np.copy(alice_bits)
         if inject_eavesdropper:
             # Eve intercepts and measures in random bases
-            eve_bases = np.random.randint(0, 2, size=self.raw_bits_count)
+            eve_bases = rng.integers(0, 2, size=self.raw_bits_count)
             # When Eve's basis mismatches Alice's, state collapses with 50% error probability
             for i in range(self.raw_bits_count):
-                if np.random.random() < eve_intercept_prob:
+                if rng.random() < eve_intercept_prob:
                     if eve_bases[i] != alice_bases[i]:
-                        channel_bits[i] = np.random.randint(0, 2)
+                        channel_bits[i] = rng.integers(0, 2)
 
         # 3. Bob chooses random measurement bases
-        bob_bases = np.random.randint(0, 2, size=self.raw_bits_count)
+        bob_bases = rng.integers(0, 2, size=self.raw_bits_count)
         bob_bits = np.copy(channel_bits)
 
         # Simulate honest channel noise (depolarizing)
         for i in range(self.raw_bits_count):
-            if np.random.random() < self.baseline_qber:
+            if rng.random() < self.baseline_qber:
                 bob_bits[i] = 1 - bob_bits[i]
 
         # 4. Sifting (keep only matching bases)
@@ -78,7 +94,7 @@ class Bb84Simulator:
 
         # 5. Error estimation on 25% of sifted bits
         test_sample_size = min(64, sifted_len // 4)
-        sample_indices = np.random.choice(sifted_len, size=test_sample_size, replace=False)
+        sample_indices = rng.choice(sifted_len, size=test_sample_size, replace=False)
         
         errors = np.sum(alice_sifted[sample_indices] != bob_sifted[sample_indices])
         qber = float(errors) / float(test_sample_size)
