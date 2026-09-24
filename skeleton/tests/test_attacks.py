@@ -170,3 +170,21 @@ def test_payload_tamper_after_sign_rejected():
     )
     assert classification.passed is False
     assert classification.label == ThreatLabel.FORGERY
+
+
+def test_bb84_deterministic_seed_and_eavesdropper_detection():
+    from shorlynot_skeleton.qkd.bb84 import Bb84Simulator
+    sim = Bb84Simulator(baseline_qber=0.02, raw_bits_count=512)
+
+    # Deterministic runs with same seed produce identical QBER and bit counts
+    res1 = sim.negotiate_session(inject_eavesdropper=False, seed=42)
+    res2 = sim.negotiate_session(inject_eavesdropper=False, seed=42)
+    assert res1.qber == res2.qber
+    assert res1.sifted_bits_count == res2.sifted_bits_count
+    assert res1.channel_status == "healthy"
+
+    # Eavesdropper injection escalates QBER significantly above baseline
+    res_eve = sim.negotiate_session(inject_eavesdropper=True, eve_intercept_prob=1.0, seed=42)
+    assert res_eve.qber > 0.15
+    assert res_eve.channel_status == "intercepted"
+
