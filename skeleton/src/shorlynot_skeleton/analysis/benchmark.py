@@ -81,7 +81,9 @@ class QuantumBenchmark:
                 "honest_accept_rate": round(float(honest_accepts) / min(self.trials, 100), 4),
                 "empirical_p_forge": round(float(forgery_accepts) / min(self.trials, 100), 4),
                 "avg_mismatch": round(float(np.mean(mismatches)), 4),
-                "avg_latency_ms": round(float(np.mean(latencies)), 3)
+                "avg_latency_ms": round(float(np.mean(latencies)), 3),
+                "p50_latency_ms": round(float(np.percentile(latencies, 50)), 3),
+                "p90_latency_ms": round(float(np.percentile(latencies, 90)), 3)
             }
 
         # 2. Per-attack detection rates
@@ -201,3 +203,4 @@ Under honest simulator/channel noise floor $p_0 = 0.02$ and false-reject budget 
             f.write(md_content)
 
         print(f"[+] Benchmark report successfully written to {output_path}")
+
