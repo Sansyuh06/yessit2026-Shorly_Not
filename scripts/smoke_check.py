@@ -84,10 +84,22 @@ def check_services(kms_url=None, skeleton_url=None, bank_url=None, timeout_sec=1
 
 
 if __name__ == "__main__":
-    k_url = sys.argv[1] if len(sys.argv) > 1 else None
-    s_url = sys.argv[2] if len(sys.argv) > 2 else None
-    b_url = sys.argv[3] if len(sys.argv) > 3 else None
-    success = check_services(kms_url=k_url, skeleton_url=s_url, bank_url=b_url)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ShorlyNot Multi-Tier Smoke Verification")
+    parser.add_argument("kms_url", nargs="?", default=None, help="KMS service URL (default: http://127.0.0.1:8000)")
+    parser.add_argument("skeleton_url", nargs="?", default=None, help="Skeleton API URL (default: http://127.0.0.1:8001)")
+    parser.add_argument("bank_url", nargs="?", default=None, help="Bank portal URL (default: http://127.0.0.1:8081)")
+    parser.add_argument("--timeout", type=int, default=15, help="Maximum wait time in seconds (default: 15)")
+
+    args = parser.parse_args()
+    success = check_services(
+        kms_url=args.kms_url,
+        skeleton_url=args.skeleton_url,
+        bank_url=args.bank_url,
+        timeout_sec=args.timeout
+    )
     if not success:
         sys.exit(1)
     sys.exit(0)
+
