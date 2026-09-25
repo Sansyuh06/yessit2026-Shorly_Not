@@ -157,3 +157,24 @@ This exponential suppression provides statistical security bounds against random
                                                                                      ├─ p̂ > τ ───> [FORGERY]
                                                                                      └─ p̂ ≤ τ ───> [OK]
 ```
+
+---
+
+## 10. Multi-Tier Escalation Ladder ($S_0 \to S_4, Q_0 \to Q_4$)
+
+The framework coordinates application-layer transaction permissions with physical router netfilter rules based on two distinct telemetry channels:
+
+### 10.1 Application Security Stages ($S$)
+- **$S_0$ (Normal Baseline)**: $\hat{p} \le \tau$, all financial transfers and signature verifications permitted.
+- **$S_1$ (Warning / Anomaly)**: Transient statistical anomalies observed; transfers allowed with verbose cryptographic audit logging.
+- **$S_2$ (Targeted Threat Quarantined)**: Single signature forgery ($\hat{p} > \tau$) or impersonation detected; targeted account quarantined, transfers suspended for offending actor.
+- **$S_3$ (Pattern Attack / Read-Only)**: Repeated forgery bursts or replay sequences detected; bank transitions to read-only balance inspection.
+- **$S_4$ (Critical Lockdown)**: Full system compromise suspected or channel intercepted; customer portal directs all sessions to `/locked`.
+
+### 10.2 Quantum Channel Link Stages ($Q$) & Hardware Defense
+- **$Q_0$ ($\text{QBER} < 5\%$)**: Optimal fiber link. Line-rate packet forwarding across relay port `8765`.
+- **$Q_1$ ($5\% \le \text{QBER} < 8\%$)**: Watch posture. Link active, rate-limited logging in kernel netfilter.
+- **$Q_2$ ($8\% \le \text{QBER} < 11\%$)**: Elevated noise. Warning prefix logged in OpenWrt `fw4` filter chain.
+- **$Q_3$ ($11\% \le \text{QBER} < 20\%$)**: BB84 eavesdropping threshold exceeded ($> 11\%$). Automatic key abort.
+- **$Q_4$ ($\text{QBER} \ge 20\%$)**: Eve full interception detected. Router guard kernel rule (`ip daddr 192.168.1.0/24 tcp dport 8765 drop`) instantly severs the physical relay link.
+
