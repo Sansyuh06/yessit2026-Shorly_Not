@@ -24,3 +24,6 @@
 | **Real-Time Dark SOC Threat Console** | Live Telemetry & Feed (`/soc`) | [`bank/app/templates/soc.html`](file:///d:/fyeshi/project/quantum/iptable/bank/app/templates/soc.html) | `test_soc_reset_restores_operations` |
 | **Authenticated SOC Control Plane** | Role-Based Access Guard | [`bank/app/main.py`](file:///d:/fyeshi/project/quantum/iptable/bank/app/main.py) | `test_soc_unauthenticated_write_rejected` |
 | **North Star Fit Test (< 2 Minutes)** | E2E Integration Scenario | [`tests/test_e2e_fit.py`](file:///d:/fyeshi/project/quantum/iptable/tests/test_e2e_fit.py) | `test_fit_test_full_scenario_end_to_end` |
+| **OpenWrt Hardware Router Guard** | TP-Link Archer C6 fw4 Daemon | [`ShorlyNot-Router-Firmware/`](file:///d:/fyeshi/project/quantum/iptable/ShorlyNot-Router-Firmware/) | `test_transfer_blocked_when_router_is_red` |
+| **Router Guard KMS Client & Retries** | Resilient Telemetry Bridge | [`bank/app/services/router_client.py`](file:///d:/fyeshi/project/quantum/iptable/bank/app/services/router_client.py) | `test_router_client_custom_retry_configuration` |
+

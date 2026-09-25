@@ -7,7 +7,7 @@ System verification and acceptance testing report for the ShorlyNot framework.
 | Product Version | 3.0.0 |
 | Protocol | ShorlyNot-QDS-T1 |
 | Detection Engine | Q-STDF (Hoeffding Statistical Bounds) |
-| Test Suite | 45 / 45 PASSED (100%) |
+| Test Suite | 52 / 52 PASSED (100%) |
 | Sign Latency (64 Aer Circuits) | ~82.3 ms |
 | Verification Latency | 0.923 ms ($\mathcal{O}(n)$ exact Born-rule) |
 | Full Pipeline Transfer Latency | ~86.9 ms |
@@ -35,6 +35,7 @@ System verification and acceptance testing report for the ShorlyNot framework.
 | Skeleton API | REST API service (:8000) and CLI utility | `api/app.py`, `cli.py` | Unit & API tests |
 | Mock Bank | Customer banking portal (:8080) and SOC console (`/soc`) | `bank/app/` | `test_bank.py` |
 | Stage Enforcement | Application-level transfer suspension | `bank/app/main.py` | `test_bank_transfers_blocked_when_attack_escalates_stage` |
+| Router Guard | OpenWrt TP-Link Archer C6 firewall daemon & KMS bridge | `ShorlyNot-Router-Firmware/`, `bank/app/services/router_client.py` | `test_router_guard.py` |
 
 ---
 
